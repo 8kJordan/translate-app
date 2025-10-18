@@ -1,0 +1,70 @@
+name: Deploy Translate App
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      # Build Frontend with Vite
+      - name: Build Frontend
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      # Compile and build backend
+      - name: Build Backend
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+          
+
+      - name: Deploy backend build
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_IP }}
+          username: ${{secrets.DEPLOY_USER}}
+          key: ${{ secrets.DEPLOY_SSH_KEY}}
+          source: "backend/dist/*,backend/package.json,backend/package-lock.json"
+          target: "/home/mern/server" # todo not critical but remove path hard coding
+
+      - name: Deploy frontend build
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_IP }}
+          username: ${{secrets.DEPLOY_USER}}
+          key: ${{ secrets.DEPLOY_SSH_KEY}}
+          source: "web/dist/*"
+          target: "/home/mern/client"
+
+      # Restart API Server
+      - name: Restart PM2 and Reload Nginx
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_IP }}
+          username: ${{secrets.DEPLOY_USER}}
+          key: ${{ secrets.DEPLOY_SSH_KEY}}
+          script: |
+            cd /home/mern/server
+            npm ci --omit=dev
+            pm2 restart express-api || pm2 start server.js --name express-api
+            pm2 save
