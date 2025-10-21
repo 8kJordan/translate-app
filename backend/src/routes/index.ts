@@ -8,6 +8,7 @@ const router = Router();
 router.use("/user", usersRouter);
 router.use("/auth", authRouter);
 
+
 // Default root route
 router.get("/", (_req, res) => {
     res.json({ message: "Welcome to the API root" });

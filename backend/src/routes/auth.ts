@@ -1,9 +1,8 @@
 import { Router, Request, Response } from "express";
+import { login } from "@controllers/auth"
+
 const router = Router();
 
-router.post("/login", (req: Request, res: Response) => {
-    const { username } = req.body;
-    res.json({ token: `fake-jwt-for-${username}` });
-});
+router.post("/", login); // auth route
 
 export default router;
