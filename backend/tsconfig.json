@@ -4,9 +4,15 @@
     "module": "CommonJS",
     "rootDir": "src",
     "outDir": "dist",
+    "baseUrl": "./src",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@schemas/*": ["schemas/*"],
+      "@routes/*": ["routes/*"],
+      "@controllers/*": ["controllers/*"]
+    }
   },
   "include": ["src"]
 }
