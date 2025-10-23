@@ -11,7 +11,8 @@
     "paths": {
       "@schemas/*": ["schemas/*"],
       "@routes/*": ["routes/*"],
-      "@controllers/*": ["controllers/*"]
+      "@controllers/*": ["controllers/*"],
+      "@db/*": ["db/*"],
     }
   },
   "include": ["src"]
