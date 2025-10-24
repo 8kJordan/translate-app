@@ -1,13 +1,15 @@
 import app from "./app";
-import { dbConnect, isDbAvailable } from "@db/connection";
+import { dbConnect } from "@db/connection";
+import { sendgridConnect } from "@utils/emailVerification";
 import dotenv from "dotenv";
 
 // fetching envs
 dotenv.config();
 
-// initializing db connection
+// initializing connections
 (async () => {
     await dbConnect();
+    sendgridConnect();
 })();
 
 
