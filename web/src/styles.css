@@ -1,0 +1,150 @@
+:root{
+  --bg: #0b1220;
+  --bg-2:#0a1424;
+  --panel:#0b1526b3;
+  --panel-border: rgba(255,255,255,.08);
+  --text:#eaf0ff;
+  --muted:#a9b2c8;
+  --accent:#4f8cff;
+  --accent-2:#9f7aea;
+  --danger:#ff6b6b;
+  --ok:#5ad67d;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family: Inter, ui-sans-serif, system-ui, Avenir, Helvetica, Arial;
+  color:var(--text);
+  min-height:100vh;
+  background: linear-gradient(180deg, #0b1323 0%, #0a111d 100%);
+}
+
+/* NAV */
+.container{max-width: 1000px; padding:24px; margin:0 auto;}
+.header{display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;}
+.nav a{ margin-left:14px; color:#8fb2ff; text-decoration:none; font-weight:600 }
+.nav a:hover{opacity:.9}
+.brand{font-weight:800; letter-spacing:.3px}
+
+/* HERO */
+.hero{ position:relative; display:grid; place-items:center; padding: 10vh 24px; }
+
+/* GLASS CARD */
+.glass-card{
+  position:relative; z-index:1;
+  background: #0f1728;                 
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 16px;
+  padding: 28px;
+  width:100%;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25); 
+  backdrop-filter: none;                 
+}
+
+/* TYPOGRAPHY */
+.h2{ margin:.2rem 0 0; font-size: 1.6rem; }
+.muted{ margin:.1rem 0 1.2rem; color:var(--muted); }
+.error{ color:#ffb4b4; font-size:.95rem; margin-top:.6rem; }
+
+/* FORM */
+.vstack{ display:grid; gap: 12px; }
+
+/* Base input — no icon-specific padding here */
+.input {
+  width: 100%;
+  height: 44px;
+  padding: 0 44px;                 /* space for icons */
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: #0c1526;
+  color: var(--text);
+  outline: none;
+  font-size: 15px;
+  line-height: normal;             /* allow natural centering */
+  display: flex;
+  align-items: center;             /* keeps text vertically centered */
+  transition: border .15s ease;
+}
+.input::placeholder {
+  color: var(--muted);
+}
+.input:focus {
+  border-color: #5b86ff;
+  box-shadow: none;
+}
+
+/* Icon wrappers */
+.with-icon {
+  position: relative;
+}
+.with-icon .input {
+  padding-left: 40px;              
+}
+.with-icon.with-right .input {
+  padding-right: 40px;             
+}
+
+/* Left & right icons */
+.icon,
+.right-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a7b4d6;
+}
+.icon {
+  left: 12px;
+}
+.right-icon {
+  right: 12px;
+  cursor: pointer;
+}
+
+/* ROWS */
+.row{ display:flex; align-items:center; gap:10px; }
+.row-space{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+
+/* BUTTONS */
+.btn{
+  border:0; border-radius: 12px; padding: 12px 16px;
+  font-weight: 700; cursor:pointer; color:white; display:inline-flex; align-items:center; justify-content:center; gap:10px;
+}
+.btn-gradient{
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 10px 30px rgba(79,140,255,.35);
+  transition: transform .06s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.btn-gradient:hover{ transform: translateY(-1px); box-shadow: 0 14px 38px rgba(79,140,255,.45); }
+.btn:disabled{ opacity:.6; cursor:not-allowed }
+
+/* BANNER */
+.banner{
+  border-radius:12px; padding:10px 12px; border:1px solid rgba(255,255,255,.08);
+  background: rgba(255, 90, 90, .08);
+  color:#ffb4b4; font-weight:600;
+}
+
+/* SWITCH */
+.switch{
+  display:inline-flex; align-items:center; gap:10px; color:var(--muted); user-select:none;
+}
+.switch input{ appearance:none; width:40px; height:22px; background:#1a2540; border-radius:9999px; position:relative; outline:none; border:1px solid rgba(255,255,255,.12); }
+.switch input:checked{ background:#3457ff; }
+.switch input::after{ content:""; position:absolute; width:18px; height:18px; border-radius:9999px; background:#fff; top:1px; left:1px; transition:left .15s ease; }
+.switch input:checked::after{ left:20px; }
+
+/* TRANSLATOR AREA */
+.textarea{
+  width:100%; min-height:160px; border-radius:14px; border:1px solid rgba(255,255,255,.12);
+  background:#0c1526; color:var(--text); padding:14px; resize:vertical; outline:none;
+}
+.select{
+  background:#0c1526; color:var(--text); border:1px solid rgba(255,255,255,.12);
+  border-radius:10px; padding:8px 10px;
+}
+.counter{ color:var(--muted); font-size:.9rem; }
