@@ -8,21 +8,22 @@ import { api, RegisterPayload } from "@/api";
 import { Mail } from "lucide-react";
 import { Phone } from "lucide-react";
 
-
 export default function Register() {
-  // note: phone starts omitted (undefined), not ""
   const [form, setForm] = useState<RegisterPayload>({
     email: "",
     password: "",
     firstName: "",
     lastName: "",
-    // phone: undefined
+    phone: "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function set<K extends keyof RegisterPayload>(key: K, value: RegisterPayload[K]) {
+  function set<K extends keyof RegisterPayload>(
+    key: K,
+    value: RegisterPayload[K]
+  ) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -33,22 +34,20 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const payload: RegisterPayload = {
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        firstName: form.firstName?.trim() || "",
-        lastName: form.lastName?.trim() || "",
-        ...(form.phone && form.phone.trim() !== "" ? { phone: form.phone.trim() } : {})
-      };
-
       const res = await api<{ status: string; message?: string }>(
         "/api/auth/register",
-        { method: "POST", body: JSON.stringify(payload) }
+        { method: "POST", body: JSON.stringify(form) }
       );
-      setMessage(res.message || "Check your inbox for a verification email.");
+      setMessage(
+        res.message || "Check your inbox for a verification email."
+      );
     } catch (err: any) {
-      // will include your zod issue list under err.data.errors if provided
-      setError(err?.data?.desc || err?.data?.message || err.message || "Registration failed");
+      setError(
+        err?.data?.desc ||
+          err?.data?.message ||
+          err.message ||
+          "Registration failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -69,14 +68,14 @@ export default function Register() {
               label="First name"
               value={form.firstName || ""}
               onChange={(e) => set("firstName", e.currentTarget.value)}
-              placeholder="Sam"
+              placeholder="First name"
               required
             />
             <Field
               label="Last name"
               value={form.lastName || ""}
               onChange={(e) => set("lastName", e.currentTarget.value)}
-              placeholder="Noble"
+              placeholder="Last name"
               required
             />
           </div>
@@ -106,7 +105,7 @@ export default function Register() {
             <Phone className="icon" size={18} />
             <Field
               label="Phone (optional)"
-              value={(form as any).phone || ""}    // show empty UI, but don't send ""
+              value={(form as any).phone || ""}   
               onChange={(e) => set("phone", e.currentTarget.value as any)}
               placeholder="+1 555 123 4567"
             />
