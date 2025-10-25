@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import { Response } from "express";
+import { TIME } from "@utils/constants"
+
 
 export interface AuthTokens {
   accessToken: string;
@@ -36,14 +38,14 @@ export function setAuthCookies(res: Response, accessToken: string, refreshToken:
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // true or false depending on .env
-    maxAge: 15 * 60 * 1000, // 15 minutes in milliseconds
+    maxAge: TIME.mToMs(15), // 15 minutes in milliseconds
     sameSite: "strict", // superficial CSRF protection, need csrf tokens
   });
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // true or false depending on .env
-    maxAge: 24 * 60 * 60 * 1000,  // 24 hours is milliseconds
+    maxAge: TIME.hToMs(24),  // 24 hours is milliseconds
     sameSite: "strict", // superficial CSRF protection, need csrf tokens
   });
 }
