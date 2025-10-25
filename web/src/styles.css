@@ -89,7 +89,7 @@ body{
 .icon,
 .right-icon {
   position: absolute;
-  top: 50%;
+  top: 65%;
   transform: translateY(-50%);
   line-height: 1;
   display: flex;
