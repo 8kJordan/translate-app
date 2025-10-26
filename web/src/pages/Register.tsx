@@ -104,7 +104,7 @@ export default function Register() {
           <div className="with-icon">
             <Phone className="icon" size={18} />
             <Field
-              label="Phone (optional)"
+              label="Phone"
               value={(form as any).phone || ""}   
               onChange={(e) => set("phone", e.currentTarget.value as any)}
               placeholder="+1 555 123 4567"
