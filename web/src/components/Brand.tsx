@@ -18,16 +18,16 @@ export default function Brand() {
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    width: 30,
-                    height: 30,
+                    width: 40,
+                    height: 40,
                     borderRadius: "9999px",
                     background: "#0097a7",      
                     boxShadow: "none"          
                 }}
             >
-                <Globe2 size={16} color="white" />
+                <Globe2 size={30} color="white" />
             </motion.span>
-            <span style={{ fontWeight: 800, letterSpacing: ".3px" }}>Translify</span>
+            <span style={{ fontWeight: 700, fontSize: "1.5rem", letterSpacing: ".3px" }}>Translify</span>
         </motion.div>
     );
 }

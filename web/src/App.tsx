@@ -5,16 +5,11 @@ import Dashboard from './pages/Dashboard'
 import { useEffect, useState } from 'react'
 import Brand from "@/components/Brand";
 
-/**
- * Simple session state just for navigation demo.
- * The backend sets httpOnly cookies on login; in a real app we would also have a /me endpoint to verify.
- */
 export default function App() {
   const [authed, setAuthed] = useState<boolean>(false);
   const location = useLocation();
 
   useEffect(() => {
-    // naive check for a query flag to simulate verified email landing
     if (new URLSearchParams(location.search).get('verified') === 'true') {
       setAuthed(true);
     }
