@@ -21,13 +21,13 @@ export default function Brand() {
                     width: 30,
                     height: 30,
                     borderRadius: "9999px",
-                    background: "#5f6ee6",      
+                    background: "#0097a7",      
                     boxShadow: "none"          
                 }}
             >
                 <Globe2 size={16} color="white" />
             </motion.span>
-            <span style={{ fontWeight: 800, letterSpacing: ".3px" }}>Translator</span>
+            <span style={{ fontWeight: 800, letterSpacing: ".3px" }}>Translify</span>
         </motion.div>
     );
 }
