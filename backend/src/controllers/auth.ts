@@ -5,9 +5,8 @@ import { loginAttempt, registerAttempt } from "@schemas/auth";
 import { User } from "@db/user.model";
 import { sendVerificationEmail } from "@utils/emailVerification";
 import { sendTestEmail} from "@utils/testEmailVerification";
-import { generateAuthTokens, setAuthCookies } from "@utils/jwt";
+import {generateAuthTokens, setAuthCookies, generateAccessToken, setAccessToken, clearSessionCookies} from "@utils/jwt";
 import * as process from "node:process";
-
 
 
 export const login = async (req: Request, res: Response) => {
@@ -38,7 +37,7 @@ export const login = async (req: Request, res: Response) => {
             console.log(`User ${email} does not exist, failed authentication`);
             return res.status(401).json({
                 "status": "error",
-                "errType": "AuthenticationError",
+                "errType": "UnauthorizedError",
                 "userExists": false,
                 "isAuthenticated": false,
             })
@@ -49,7 +48,7 @@ export const login = async (req: Request, res: Response) => {
             console.log(`User ${email} has not verified their email, failed authentication`);
             return res.status(401).json({
                 "status": "error",
-                "errType": "AuthenticationError",
+                "errType": "UnauthorizedError",
                 "isAuthenticated": false,
                 "desc": "User has not verified their email"
             })
@@ -58,9 +57,10 @@ export const login = async (req: Request, res: Response) => {
         // pass verification
         const isPassValid = await argon2.verify(user!.password, password)
         if (!isPassValid) {
+            console.log(`User ${email} entered an incorrect password, unauthorized request`);
             return res.status(401).json({
                 "status": "error",
-                "errType": "AuthenticationError",
+                "errType": "UnauthorizedError",
                 "isAuthenticated": false,
             })
         }
@@ -74,6 +74,7 @@ export const login = async (req: Request, res: Response) => {
 
         setAuthCookies(res, accessToken, refreshToken); // setting both access and refresh tokens as cookies in response
 
+        console.log(`Successfully authenticated user ${email}`)
         return res.status(200).json({
             "status": "success",
             "isAuthenticated": true,
@@ -176,6 +177,7 @@ export const register = async (req: Request, res: Response) => {
     }
 }
 
+// TODO after email verification, can just re route to home page if successful, instead of returning JSON
 export const verifyEmail = async (req: Request, res: Response) => {
     const { token } = req.params; // gathering request context
 
@@ -228,6 +230,55 @@ export const verifyEmail = async (req: Request, res: Response) => {
             "status": "error",
             "errType": "InvalidTokenError",
             "desc": "Invalid or expired token"
+        });
+    }
+};
+
+export const refreshAccessToken = async (req: Request, res: Response) => {
+    const token = req.cookies.refreshToken
+
+    if(!token){
+        return res.status(401).json({
+            "status": "error",
+            "errType": "UnauthorizedError",
+        })
+    }
+
+    let decoded;
+    try{
+        decoded = jwt.verify(token, process.env.AUTH_REFRESH_SECRET!) as {
+            userId: string;
+        }
+    } catch (error){ // throw unauthorized err if decode fails
+        console.log(`Failed to refresh access token for user`);
+        return res.status(401).json({
+            "status": "error",
+            "errType": "UnauthorizedError",
+        })
+    }
+
+    // else generate new access token
+    const accessToken: string = generateAccessToken(decoded.userId);
+
+    setAccessToken(res, accessToken); // setting the new access token to response cookies
+
+    console.log(`Successfully refreshed access token for user ${decoded.userId}`);
+    return res.status(200).json({
+        "status": "success"
+    })
+}
+
+export const logout = async (req: Request, res: Response) => {
+    try {
+
+        clearSessionCookies(res);
+        return res.status(200).json({
+            status: "success"
+        });
+    } catch (err) {
+        return res.status(500).json({
+            status: "error",
+            errType: "LogoutError",
         });
     }
 };
