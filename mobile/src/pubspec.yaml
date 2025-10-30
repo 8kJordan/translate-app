@@ -1,0 +1,24 @@
+name: translate_mobile
+description: Mobile client for translate-app
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # 🧠 For making HTTP requests to your Express backend
+  http: ^1.2.2
+  # ⚙️ Lightweight hooks & state management (optional but helpful)
+  flutter_hooks: ^0.20.5
+  hooks_riverpod: ^2.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
