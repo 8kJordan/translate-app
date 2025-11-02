@@ -8,7 +8,7 @@ const router = Router();
 
 
 router.use("/auth", authRouter); // authentication endpoint
-// router.use("/translate", translateRouter); // translation endpoint
+router.use("/translate", translateRouter); // translation endpoint
 router.use("/languages", languageRouter); // language endpoint
 // router.use("/:userEmail", usersRouter); // user endpoint
 
