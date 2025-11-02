@@ -7,6 +7,7 @@ import GlassCard from "@/components/GlassCard";
 import { api, RegisterPayload } from "@/api";
 import { Mail } from "lucide-react";
 import { Phone } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Register() {
   const [form, setForm] = useState<RegisterPayload>({
@@ -44,9 +45,9 @@ export default function Register() {
     } catch (err: any) {
       setError(
         err?.data?.desc ||
-          err?.data?.message ||
-          err.message ||
-          "Registration failed"
+        err?.data?.message ||
+        err.message ||
+        "Registration failed"
       );
     } finally {
       setLoading(false);
@@ -105,11 +106,18 @@ export default function Register() {
             <Phone className="icon" size={18} />
             <Field
               label="Phone"
-              value={(form as any).phone || ""}   
+              value={(form as any).phone || ""}
               onChange={(e) => set("phone", e.currentTarget.value as any)}
               placeholder="+1 555 123 4567"
             />
           </div>
+
+          <p className="muted" style={{ marginBottom: "0.5rem" }}>
+            Already have an account?{" "}
+            <Link to="/" className="accent-link">
+              Return to login
+            </Link>
+          </p>
 
           <Button loading={loading} type="submit">Create account</Button>
         </form>
