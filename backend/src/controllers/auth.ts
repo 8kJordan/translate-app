@@ -9,6 +9,46 @@ import {generateAuthTokens, setAuthCookies, generateAccessToken, setAccessToken,
 import * as process from "node:process";
 
 
+export const authenticate = async (req: Request, res: Response) => {
+    try {
+        const token = (req as any).cookies?.accessToken;
+
+        if (!token) {
+            return res.status(401).json({ status: "error", errType: "UnauthorizedError" });
+        }
+
+        const secret = process.env.AUTH_SECRET;
+        if (!secret) {
+            return res.status(500).json({ status: "error", errType: "ServerError", desc: "Missing AUTH_SECRET" });
+        }
+
+        const payload = jwt.verify(token, secret) as { userId?: string }; // getting useId from jwt payload
+        if (!payload?.userId) {
+            return res.status(401).json({ status: "error", errType: "UnauthorizedError" });
+        }
+
+        const user = await User.findById(payload.userId) // fetching user data
+
+        if (!user) {
+            console.log(`User ${payload.userId} does not exist, failed authentication`);
+            return res.status(401).json({ status: "error", errType: "UnauthorizedError" });
+        }
+
+        console.log(`Successfully authenticated user ${payload.userId}`);
+        return res.status(200).json({
+            status: "success",
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            isAuthenticated: true
+        });
+
+    } catch (err) {
+        return res.status(401).json({ status: "error", errType: "UnauthorizedError" });
+    }
+}
+
 export const login = async (req: Request, res: Response) => {
     const result = loginAttempt.safeParse(req.body);
 
@@ -76,8 +116,12 @@ export const login = async (req: Request, res: Response) => {
 
         console.log(`Successfully authenticated user ${email}`)
         return res.status(200).json({
-            "status": "success",
-            "isAuthenticated": true,
+            status: "success",
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            isAuthenticated: true,
         });
 
     }catch (error) {
@@ -95,14 +139,14 @@ export const register = async (req: Request, res: Response) => {
     if(!result.success) {
         console.log(result.error.message)
         return res.status(400).json({
-            "status": "error",
-            "errType": "SchemaValidationErr",
-            "errors": result.error!.issues.map(e => ({
+            status: "error",
+            errType: "SchemaValidationErr",
+            errors: result.error!.issues.map(e => ({
                 field: e.path,
                 code: e.code,
                 message: e.message,
             })),
-            "message": "Incorrect schema in request body"
+            message: "Incorrect schema in request body"
         });
     }
     const {email, password, phone, firstName, lastName} = result.data!;
@@ -141,7 +185,7 @@ export const register = async (req: Request, res: Response) => {
         if (process.env.NODE_ENV === "development"){
             verificationUrl = `http://localhost:3000/api/auth/verify/${token}`;
         } else if (process.env.NODE_ENV === "production") {
-            verificationUrl = `http://group9-contacts.com/api/auth/verify/${token}` // TODO change to https when it is set up
+            verificationUrl = `https://group9-contacts.com/api/auth/verify/${token}`
         } else {
             return res.status(500).json({
                 "status": "error",

@@ -1,9 +1,10 @@
 import { Router, Request, Response } from "express";
-import { login, register, verifyEmail, refreshAccessToken, logout} from "@controllers/auth";
+import {login, register, verifyEmail, refreshAccessToken, logout, authenticate} from "@controllers/auth";
 
 const router = Router();
 
-router.post("/", login); // auth route
+router.post("/", authenticate) // auth route
+router.post("/login", login); // login route
 router.post("/register", register); // register route
 router.get("/verify/:token", verifyEmail); // verification route
 router.post("/refresh", refreshAccessToken); // refresh access token route
