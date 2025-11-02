@@ -30,7 +30,7 @@ export default function Login({ onAuthed }: { onAuthed: () => void }) {
     try {
       const payload: LoginPayload = { email, password };
       const res = await api<{ status: string; isAuthenticated: boolean }>(
-        "/api/auth/login",
+        "/api/auth",
         { method: "POST", body: JSON.stringify(payload) }
       );
       if (res.isAuthenticated) {
