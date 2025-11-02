@@ -5,7 +5,7 @@ import { translateRequest, envSchema } from "@schemas/translate";
 import { validationError } from "@utils/errors";
 import { Translation } from "@db/translation.model";
 import axios from "axios";
-import { v4 as uuidv4 } from "uuid";
+import { v4 } from "uuid";
 
 
 function getEnvs(){
@@ -38,7 +38,7 @@ async function requestTranslation(envs: zod.infer<typeof envSchema>, reqBody: zo
                 "Ocp-Apim-Subscription-Key": envs.AZURE_API_KEY,
                 "Ocp-Apim-Subscription-Region": envs.AZURE_REGION,
                 "Content-Type": "application/json",
-                "X-ClientTraceId": uuidv4().toString(),
+                "X-ClientTraceId": v4().toString(),
             },
             params: {
                 "api-version": "3.0",
