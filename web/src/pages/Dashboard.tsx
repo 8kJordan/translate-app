@@ -34,7 +34,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       </header>
 
       {err && <div className="banner">{err}</div>}
-      <p>You're signed in. Build your translator UI here.</p>
+      <p>You're signed in. Dashboard in progress.</p>
     </div>
   );
 }
