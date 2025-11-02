@@ -263,12 +263,27 @@ a:hover,
   color: var(--accent-2);
 }
 
-/* Mobile-specific tightening + centering */
-@media (max-width: 640px) {
-  .container { padding: 16px; }
+/* Fix header spacing and center hero on mobile */
+@media (max-width: 768px) {
   .header {
-    justify-content: center;        
+    justify-content: center; /* centers the logo horizontally */
   }
-  .hero { padding: 8vh 16px; }      /* balanced padding on mobile */
-  .glass-card { margin-inline: auto; }
+
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8vh 16px;
+  }
+
+  .glass-card {
+    margin: 0 auto;
+    max-width: 400px; /* keep consistent width */
+    width: 100%;
+  }
+
+  body {
+    overflow-x: hidden; /* prevent any slight horizontal scroll */
+  }
 }
