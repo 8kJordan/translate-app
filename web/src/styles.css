@@ -26,6 +26,7 @@ body {
     linear-gradient(to bottom right, rgba(10, 10, 20, 0.8), rgba(5, 5, 15, 0.8)),
     url("./images/bg.jpg") no-repeat center center fixed;
   background-size: cover;
+  overflow-x: hidden;
 }
 
 /* NAV */
@@ -64,6 +65,13 @@ body {
   display: grid;
   place-items: center;
   padding: 10vh 24px;
+  margin-inline: auto;
+}
+
+.hero > * {
+  max-width: 640px;                 /* cap card width */
+  width: 100%;
+  margin-inline: auto;              /* hard-center the card */
 }
 
 /* GLASS CARD */
@@ -220,20 +228,6 @@ body {
   font-weight: 600;
 }
 
-/* ===== Auth split layout ===== */
-.auth-split {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 420px 1fr;
-}
-
-.auth-side {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
 .auth-hero {
   position: relative;
   background: #062229;
@@ -267,4 +261,14 @@ a,
 a:hover,
 .link:hover {
   color: var(--accent-2);
+}
+
+/* Mobile-specific tightening + centering */
+@media (max-width: 640px) {
+  .container { padding: 16px; }
+  .header {
+    justify-content: center;        
+  }
+  .hero { padding: 8vh 16px; }      /* balanced padding on mobile */
+  .glass-card { margin-inline: auto; }
 }

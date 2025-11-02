@@ -7,8 +7,10 @@ import GlassCard from "@/components/GlassCard";
 import Button from "@/components/Button";
 import { Mail } from "lucide-react";
 import Banner from "@/components/Banner";
+import { Link } from "react-router-dom";
 
-function isValidEmail(v: string){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) }
+
+function isValidEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) }
 
 export default function Login({ onAuthed }: { onAuthed: () => void }) {
   const [email, setEmail] = useState("");
@@ -22,7 +24,7 @@ export default function Login({ onAuthed }: { onAuthed: () => void }) {
     e.preventDefault();
     setError(null);
     if (!isValidEmail(email)) { setError("Please enter a valid email."); return; }
-    if (password.length < 6){ setError("Password must be at least 6 characters."); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
 
     setLoading(true);
     try {
@@ -71,9 +73,17 @@ export default function Login({ onAuthed }: { onAuthed: () => void }) {
             autoComplete="current-password"
           />
 
+          <p className="muted" style={{ marginBottom: "0.5rem" }}>
+            Not a member?{" "}
+            <Link to="/register" className="accent-link">
+              Register here
+            </Link>
+          </p>
+
           <Button loading={loading} type="submit" aria-label="Sign in">
             Sign In
           </Button>
+
         </form>
       </GlassCard>
     </div>

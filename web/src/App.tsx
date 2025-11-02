@@ -20,8 +20,6 @@ export default function App() {
       <header className="header">
         <Brand />
         <nav className="nav">
-          <Link to="/">Login</Link>
-          <Link to="/register">Register</Link>
           {authed && <Link to="/app">App</Link>}
         </nav>
       </header>
