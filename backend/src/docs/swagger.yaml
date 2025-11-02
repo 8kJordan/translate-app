@@ -260,7 +260,7 @@ paths:
           schema:
             type: string
           description: Human-readable language name (case insensitive).
-          example: English
+          example: "English"
       responses:
         '200':
           description: Language code resolved
