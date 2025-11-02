@@ -259,7 +259,8 @@ paths:
           required: true
           schema:
             type: string
-          description: Human-readable language name (case insensitive). Example: `English`.
+          description: Human-readable language name (case insensitive).
+          example: English
       responses:
         '200':
           description: Language code resolved
