@@ -1,0 +1,554 @@
+openapi: 3.0.3
+info:
+  title: Translate App API
+  version: 1.0.0
+  description: |
+    REST API for the Translate App backend. All endpoints are served under the `/api` prefix.
+    Authentication uses http-only cookies containing JWT access and refresh tokens. Unless
+    otherwise stated, responses are JSON objects.
+servers:
+  - url: /api
+tags:
+  - name: Auth
+    description: Session-based authentication endpoints.
+  - name: Translation
+    description: Text translation operations.
+  - name: Languages
+    description: Language metadata queries.
+paths:
+  /auth:
+    post:
+      tags: [Auth]
+      summary: Verify the current user session
+      description: |
+        Validates the `accessToken` cookie and returns the authenticated user's profile.
+      responses:
+        '200':
+          description: User is authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+              examples:
+                default:
+                  value:
+                    status: success
+                    email: jane.doe@example.com
+                    firstName: Jane
+                    lastName: Doe
+                    phone: '+14155550123'
+                    isAuthenticated: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      security:
+        - cookieAuth: []
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in a user
+      description: Authenticates a user with email and password. On success, http-only cookies for `accessToken` and `refreshToken` are set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              default:
+                value:
+                  email: jane.doe@example.com
+                  password: Str0ngP@ss!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              examples:
+                invalidPassword:
+                  value:
+                    status: error
+                    errType: SchemaValidationErr
+                    errors:
+                      - field: ["password"]
+                        code: too_small
+                        message: Password must be at least 8 characters long
+                    message: Incorrect schema in request body
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginUnauthorizedResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Creates a new user account and sends a verification email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              default:
+                value:
+                  email: jane.doe@example.com
+                  password: Str0ngP@ss!
+                  phone: '+14155550123'
+                  firstName: Jane
+                  lastName: Doe
+      responses:
+        '200':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSuccessResponse'
+        '400':
+          description: Validation error or duplicate email
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/DuplicateEmailResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /auth/verify/{token}:
+    get:
+      tags: [Auth]
+      summary: Verify a user's email address
+      description: Confirms a user's email address using the verification token that was emailed to them.
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: JWT email verification token sent to the user.
+      responses:
+        '200':
+          description: Email verification succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationSuccessResponse'
+        '400':
+          description: Invalid token or user not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VerificationErrorResponse'
+                  - $ref: '#/components/schemas/InvalidTokenErrorResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh the access token
+      description: Issues a new access token using the `refreshToken` cookie.
+      responses:
+        '200':
+          description: Access token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                required: [status]
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      security:
+        - refreshCookieAuth: []
+  /auth/logout:
+    get:
+      tags: [Auth]
+      summary: Log out the current user
+      description: Clears authentication cookies.
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                required: [status]
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /translate:
+    post:
+      tags: [Translation]
+      summary: Translate text
+      description: Translates the provided text using Azure Cognitive Services. Requires an authenticated session.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TranslateRequest'
+            examples:
+              default:
+                value:
+                  from: en
+                  to: es
+                  text: "Hello world"
+      responses:
+        '200':
+          description: Translation succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslateSuccessResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslateBadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /languages:
+    get:
+      tags: [Languages]
+      summary: List supported languages
+      description: Retrieves all languages supported by the upstream translation provider.
+      responses:
+        '200':
+          description: Supported languages fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguagesResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /languages/{language}:
+    get:
+      tags: [Languages]
+      summary: Get a language's translation code
+      description: Returns the ISO code for the given language name.
+      parameters:
+        - name: language
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Human-readable language name (case insensitive).
+          example: "English"
+      responses:
+        '200':
+          description: Language code resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageCodeResponse'
+        '400':
+          description: Invalid language name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: accessToken
+    refreshCookieAuth:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+  schemas:
+    AuthSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        isAuthenticated:
+          type: boolean
+      required: [status, email, firstName, lastName, phone, isAuthenticated]
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+      required: [email, password]
+    RegisterRequest:
+      allOf:
+        - $ref: '#/components/schemas/LoginRequest'
+        - type: object
+          properties:
+            phone:
+              type: string
+              example: '+14155550123'
+            firstName:
+              type: string
+            lastName:
+              type: string
+          required: [phone, firstName, lastName]
+    RegisterSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+      required: [status, message]
+      example:
+        status: success
+        message: Sent Email Verification
+    DuplicateEmailResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        errType:
+          type: string
+          enum: [RegistrationError]
+        userExists:
+          type: boolean
+        desc:
+          type: string
+      required: [status, errType, userExists, desc]
+      example:
+        status: error
+        errType: RegistrationError
+        userExists: true
+        desc: Email already in use
+    VerificationSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        userExists:
+          type: boolean
+        isVerified:
+          type: boolean
+      required: [status, userExists, isVerified]
+    VerificationErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        errType:
+          type: string
+          enum: [VerificationError]
+        userExists:
+          type: boolean
+        isVerified:
+          type: boolean
+        desc:
+          type: string
+      required: [status, errType, userExists, isVerified, desc]
+    InvalidTokenErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        errType:
+          type: string
+          enum: [InvalidTokenError]
+        desc:
+          type: string
+      required: [status, errType, desc]
+    LoginUnauthorizedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        errType:
+          type: string
+          enum: [UnauthorizedError]
+        userExists:
+          type: boolean
+        isAuthenticated:
+          type: boolean
+        desc:
+          type: string
+      required: [status, errType]
+    ValidationErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        errType:
+          type: string
+          enum: [SchemaValidationErr]
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: array
+                items:
+                  type: string
+              code:
+                type: string
+              message:
+                type: string
+            required: [field, code, message]
+        message:
+          type: string
+      required: [status, errType, errors, message]
+    TranslateRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          description: Optional language code for the source text.
+          example: en
+        to:
+          type: string
+          description: Target language code.
+          example: es
+        text:
+          type: string
+          description: Text to translate.
+          example: Hello world
+      required: [to, text]
+    TranslateSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        sourceText:
+          type: string
+        translatedText:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+      required: [status, sourceText, translatedText, to]
+      example:
+        status: success
+        sourceText: Hello world
+        translatedText: Hola mundo
+        from: en
+        to: es
+    TranslateBadRequestResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        errType:
+          type: string
+          enum: [BadRequestError]
+        desc:
+          type: string
+      required: [status, errType, desc]
+    LanguagesResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        supportedLanguages:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              name:
+                type: string
+              nativeName:
+                type: string
+              dir:
+                type: string
+                enum: [ltr, rtl]
+            required: [name, nativeName, dir]
+      required: [status, supportedLanguages]
+    LanguageCodeResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        code:
+          type: string
+      required: [status, code]
+  responses:
+    UnauthorizedError:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [error]
+              errType:
+                type: string
+                enum: [UnauthorizedError]
+              desc:
+                type: string
+            required: [status, errType]
+    ServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [error]
+              errType:
+                type: string
+                enum: [ServerError]
+              desc:
+                type: string
+            required: [status, errType]
