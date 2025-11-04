@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/server.ts",
-    "build": "tsc -b && tsc-alias -p tsconfig.json",
+    "build": "tsc -b && tsc-alias -p tsconfig.json && cp src/docs/swagger.yaml dist/docs/",
     "start": "node dist/server.js"
   },
   "keywords": [],
