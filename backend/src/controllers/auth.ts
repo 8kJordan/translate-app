@@ -6,7 +6,7 @@ import { User } from "@db/user.model";
 import { sendVerificationEmail } from "@utils/emailVerification";
 import { sendTestEmail} from "@utils/testEmailVerification";
 import {generateAuthTokens, setAuthCookies, generateAccessToken, setAccessToken, clearSessionCookies} from "@utils/jwt";
-import * as process from "node:process";
+import { redirectTemplateSuccess, redirectTemplateFailure } from "@utils/redirectTemplate";
 
 
 export const authenticate = async (req: Request, res: Response) => {
@@ -221,7 +221,7 @@ export const register = async (req: Request, res: Response) => {
     }
 }
 
-// TODO after email verification, can just re route to home page if successful, instead of returning JSON
+// TODO logic looks good for the most part,
 export const verifyEmail = async (req: Request, res: Response) => {
     const { token } = req.params; // gathering request context
 
@@ -235,23 +235,13 @@ export const verifyEmail = async (req: Request, res: Response) => {
         const user = await User.findById(decoded.userId);
         if (!user) {
             console.log(`User ${decoded.email} does not exist, failed to perform verification`);
-            return res.status(400).json({
-                "status": "error",
-                "errType": "VerificationError",
-                "userExists": false,
-                "isVerified": false,
-                "desc": "User not found"
-            });
+            return res.status(400).send(redirectTemplateFailure)
         }
 
         // if user has already verified their email return success
         if (user.isVerified) {
             console.log(`User ${user.email} has already been verified`);
-            return res.status(200).json({
-                "status": "success",
-                "userExists": true,
-                "isVerified": true,
-            });
+            return res.status(200).send(redirectTemplateSuccess);
         }
         // generating signed access and refresh tokens
         const { accessToken, refreshToken } = generateAuthTokens(String(user._id))
@@ -263,18 +253,10 @@ export const verifyEmail = async (req: Request, res: Response) => {
         setAuthCookies(res, accessToken, refreshToken); // setting both access and refresh tokens as cookies in response
 
         console.log(`User ${user.email} has successfully been verified`);
-        res.status(200).json({ // return successful response
-            "status": "success",
-            "userExists": true,
-            "isVerified": true,
-        });
+        return res.status(200).send(redirectTemplateSuccess);
     } catch (err) {
         console.error("Failed to verify user token: ", err)
-        res.status(400).json({
-            "status": "error",
-            "errType": "InvalidTokenError",
-            "desc": "Invalid or expired token"
-        });
+        return res.status(401).send(redirectTemplateFailure)
     }
 };
 
