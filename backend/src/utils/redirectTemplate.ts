@@ -1,5 +1,4 @@
 
-
 function getRedirects(){
     return {
         redirectUrl: process.env.NODE_ENV !== 'production' ? "http://localhost:5173/" : "https://group9-contacts.com/",
