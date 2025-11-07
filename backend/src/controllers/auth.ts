@@ -221,7 +221,6 @@ export const register = async (req: Request, res: Response) => {
     }
 }
 
-// TODO logic looks good for the most part,
 export const verifyEmail = async (req: Request, res: Response) => {
     const { token } = req.params; // gathering request context
 
@@ -235,13 +234,13 @@ export const verifyEmail = async (req: Request, res: Response) => {
         const user = await User.findById(decoded.userId);
         if (!user) {
             console.log(`User ${decoded.email} does not exist, failed to perform verification`);
-            return res.status(400).send(redirectTemplateFailure)
+            return res.status(400).send(redirectTemplateFailure())
         }
 
         // if user has already verified their email return success
         if (user.isVerified) {
             console.log(`User ${user.email} has already been verified`);
-            return res.status(200).send(redirectTemplateSuccess);
+            return res.status(200).send(redirectTemplateSuccess());
         }
         // generating signed access and refresh tokens
         const { accessToken, refreshToken } = generateAuthTokens(String(user._id))
@@ -253,10 +252,10 @@ export const verifyEmail = async (req: Request, res: Response) => {
         setAuthCookies(res, accessToken, refreshToken); // setting both access and refresh tokens as cookies in response
 
         console.log(`User ${user.email} has successfully been verified`);
-        return res.status(200).send(redirectTemplateSuccess);
+        return res.status(200).send(redirectTemplateSuccess());
     } catch (err) {
         console.error("Failed to verify user token: ", err)
-        return res.status(401).send(redirectTemplateFailure)
+        return res.status(401).send(redirectTemplateFailure())
     }
 };
 
