@@ -23,12 +23,20 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [text, setText] = useState<string>("");
   const [result, setResult] = useState<string>("");
 
+  // autodetect display
+  const [detectedFrom, setDetectedFrom] = useState<string | null>(null);
+  const codeToName = (code: string) =>
+    languages.find(l => l.code === code)?.name || code.toUpperCase();
+
   // Fetch languages on mount
   useEffect(() => {
     (async () => {
       try {
         setErr(null);
-        const res = await api<{ status: string; supportedLanguages: Record<string, { name: string; nativeName: string }> }>('/api/languages', { method: 'GET' });
+        const res = await api<{ status: string; supportedLanguages: Record<string, { name: string; nativeName: string }> }>(
+          LANGUAGES_ENDPOINT,
+          { method: 'GET' }
+        );
 
         const langs = Object.entries(res.supportedLanguages)
           .map(([code, info]) => ({
@@ -45,33 +53,46 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     })();
   }, []);
 
+  // Clear detected chip when user changes inputs
+  useEffect(() => {
+    setDetectedFrom(null);
+  }, [text, from]);
+
   const canTranslate = useMemo(
     () => text.trim().length > 0 && !!to && !loading,
     [text, to, loading]
   );
-
 
   async function handleTranslate() {
     if (!canTranslate) return;
     setLoading(true);
     setErr(null);
     setResult("");
+    setDetectedFrom(null);
 
     try {
+      // Build payload; omit 'from' entirely if auto
       const payload: Record<string, string> = {
         text: text.trim(),
         to
       };
-      // only include 'from' if not auto
       if (from !== "auto") payload.from = from;
 
-      const res = await api<{ translatedText?: string; translation?: string; text?: string }>(
-        "/api/translate",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await api<{
+        translatedText?: string;
+        translation?: string;
+        text?: string;
+        from?: string; // detected language code from backend
+        to?: string;
+      }>(TRANSLATE_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      // If backend detected language, update 'from' dropdown
+      if (from === "auto" && res.from) {
+        setFrom(res.from);
+      }
 
       const out =
         res.translatedText ||
@@ -81,6 +102,11 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         res.text ||
         "";
       setResult(out);
+
+      // If auto-detect was selected and backend returned the detected source, show it
+      if (from === "auto" && res.from) {
+        setDetectedFrom(res.from);
+      }
     } catch (e: any) {
       setErr(e?.data?.message || e?.message || "Translation failed.");
     } finally {
@@ -138,12 +164,23 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="row-space">
             <div className="select-wrap">
               <label className="label">From</label>
-              <select className="select" value={from} onChange={e => setFrom(e.target.value)}>
+              <select
+                className="select"
+                value={from}
+                onChange={e => setFrom(e.target.value)}
+              >
                 <option value="auto">Auto-detect</option>
                 {languages.map(l => (
                   <option key={l.code} value={l.code}>{l.name}</option>
                 ))}
               </select>
+
+              {/* show detected language when auto-detect is used */}
+              {from === "auto" && detectedFrom && (
+                <div className="muted" style={{ marginTop: 6 }}>
+                  Detected: <strong>{codeToName(detectedFrom)} ({detectedFrom})</strong>
+                </div>
+              )}
             </div>
 
             <button className="link-btn" onClick={swap} title="Swap languages" disabled={from === "auto"}>
