@@ -15,6 +15,8 @@ tags:
     description: Text translation operations.
   - name: Languages
     description: Language metadata queries.
+  - name: Users
+    description: Authenticated user profile and translation history.
 paths:
   /auth:
     post:
@@ -276,6 +278,139 @@ paths:
                 $ref: '#/components/schemas/ValidationErrorResponse'
         '500':
           $ref: '#/components/responses/ServerError'
+  /users/{userEmail}:
+    get:
+      tags: [Users]
+      summary: Get a user's profile
+      description: |-
+        Returns the authenticated user's profile data. The `userEmail` path parameter must match the
+        email address associated with the authenticated session. Requests are rejected if the session
+        does not belong to the specified user.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: userEmail
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+          description: Email address of the user to fetch.
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          description: Invalid email parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/UserNotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /users/{userEmail}/translations:
+    get:
+      tags: [Users]
+      summary: List a user's translations
+      description: |-
+        Returns paginated translation history for the authenticated user. Pagination defaults to
+        `page=1` and `limit=10` when the parameters are omitted.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: userEmail
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+          description: Email address of the user whose translations are requested.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 1-based page number of the results.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Maximum number of translations to return per page.
+      responses:
+        '200':
+          description: Translation history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserTranslationListResponse'
+        '400':
+          description: Invalid path or query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/UserNotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /users/{userEmail}/translations/{translationId}:
+    get:
+      tags: [Users]
+      summary: Get a specific user translation
+      description: |-
+        Returns a single translation entry created by the authenticated user. Access is restricted to
+        the owner of the translation.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: userEmail
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+          description: Email address of the user that created the translation.
+        - name: translationId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          description: MongoDB object identifier of the translation.
+      responses:
+        '200':
+          description: Translation retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserTranslationResponse'
+        '400':
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/TranslationNotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
 components:
   securitySchemes:
     cookieAuth:
@@ -519,6 +654,126 @@ components:
         code:
           type: string
       required: [status, code]
+    UserProfileData:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        isVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [email, firstName, lastName, isVerified, createdAt]
+    UserProfileResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: '#/components/schemas/UserProfileData'
+      required: [status, data]
+      example:
+        status: success
+        data:
+          email: jane.doe@example.com
+          firstName: Jane
+          lastName: Doe
+          phone: '+14155550123'
+          isVerified: true
+          createdAt: '2023-08-01T12:34:56.000Z'
+    TranslationResource:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB object identifier.
+        user:
+          type: string
+          description: Identifier of the user that created the translation.
+        sourceText:
+          type: string
+        translatedText:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [_id, user, sourceText, translatedText, from, to, createdAt, updatedAt]
+    UserTranslationListResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationResource'
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            pages:
+              type: integer
+          required: [page, limit, total, pages]
+      required: [status, data, meta]
+      example:
+        status: success
+        data:
+          - _id: 64c1234567890abcdef01234
+            user: 64c0fedcba98765432100123
+            sourceText: Hello world
+            translatedText: Hola mundo
+            from: en
+            to: es
+            createdAt: '2023-08-01T12:00:00.000Z'
+            updatedAt: '2023-08-01T12:00:00.000Z'
+        meta:
+          page: 1
+          limit: 10
+          total: 23
+          pages: 3
+    UserTranslationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: '#/components/schemas/TranslationResource'
+      required: [status, data]
+      example:
+        status: success
+        data:
+          _id: 64c1234567890abcdef01234
+          user: 64c0fedcba98765432100123
+          sourceText: Hello world
+          translatedText: Hola mundo
+          from: en
+          to: es
+          createdAt: '2023-08-01T12:00:00.000Z'
+          updatedAt: '2023-08-01T12:00:00.000Z'
   responses:
     UnauthorizedError:
       description: Missing or invalid authentication token
@@ -535,6 +790,50 @@ components:
                 enum: [UnauthorizedError]
               desc:
                 type: string
+            required: [status, errType]
+    ForbiddenError:
+      description: Authenticated user is not allowed to access the requested resource
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [error]
+              errType:
+                type: string
+                enum: [ForbiddenError]
+            required: [status, errType]
+    UserNotFoundError:
+      description: Requested user could not be found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [error]
+              errType:
+                type: string
+                enum: [UserNotFoundError]
+              desc:
+                type: string
+            required: [status, errType]
+    TranslationNotFoundError:
+      description: Requested translation could not be found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [error]
+              errType:
+                type: string
+                enum: [NotFound]
             required: [status, errType]
     ServerError:
       description: Unexpected server error
