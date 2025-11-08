@@ -1,6 +1,6 @@
 import * as zod from "zod"
 
-const languageCode = zod
+export const languageCode = zod
     .string()
     .trim()
     .lowercase()

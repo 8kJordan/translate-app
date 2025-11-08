@@ -1,5 +1,5 @@
-import { Request, Response } from "express";
-import { userEmailParam, translationIdParam, paginationQuery } from "@schemas/user";
+import {Request, Response } from "express";
+import { userEmailParam, paginationQuery, searchPaginationQuery } from "@schemas/user";
 import { User } from "@db/user.model";
 import { Translation } from "@db/translation.model";
 import { AuthedRequest } from "@utils/authMiddleware";
@@ -69,7 +69,7 @@ export async function listUserTranslations(req: AuthedRequest, res: Response) {
       Translation.countDocuments({ user: user._id }),
     ]);
 
-    console.log(`Successfully gathered ${total} translations for user ${req.userId}`);
+    console.log(`Successfully gathered ${items.length} translations for user ${req.userId}`);
     return res.status(200).json({
       status: "success",
       data: items,
@@ -80,25 +80,54 @@ export async function listUserTranslations(req: AuthedRequest, res: Response) {
   }
 }
 
-// TODO cont herE
-export async function getUserTranslation(req: AuthedRequest, res: Response) {
-  const params = userEmailParam.merge(translationIdParam).safeParse(req.params as any);
+
+export async function searchUserTranslations(req: AuthedRequest, res: Response) {
+  const body = searchPaginationQuery.safeParse(req.body);
+  const params = userEmailParam.safeParse(req.params);
+  const query = paginationQuery.safeParse(req.query);
+
+  if (!body.success) return validationError(res, body.error.issues);
   if (!params.success) return validationError(res, params.error.issues);
+  if (!query.success) return validationError(res, query.error.issues);
 
   try {
     const user = await User.findOne({ email: params.data.userEmail }).lean();
-    if (!user) return res.status(404).json({ status: "error", errType: "NotFound" });
-    if (String(user._id) !== req.userId) return forbidden(res);
+    if (!user) return res.status(404).json({ status: "error", errType: "UserNotFoundError", desc: "User not found" });
 
-    const translation = await Translation.findOne({
-      _id: params.data.translationId,
-      user: user._id,
-    }).lean();
+    if (String(user._id) !== req.userId) return forbidden(res); // preventing unauthorized attempts to reach this API on another users behalf
 
-    if (!translation) return res.status(404).json({ status: "error", errType: "NotFound" });
-    return res.status(200).json({ status: "success", data: translation });
+    const { page, limit } = query.data;
+    const skip = ( page - 1 ) * limit;
+
+    const dbQuery: Record<string, any> = { user: user._id, ...body.data }; // building db query
+
+    // let the text properties allow partial matches
+    if (dbQuery.sourceText) {
+      dbQuery.sourceText = { $regex: body.data.sourceText, $options: "i"}
+    }
+
+    if (dbQuery.translatedText) {
+      dbQuery.translatedText = { $regex: body.data.translatedText, $options: "i"}
+    }
+
+    const [items, total] = await Promise.all([
+      Translation.find( dbQuery )
+          .sort({ createdAt: -1 }) // grabbing translation starting at newest
+          .skip(skip)
+          .limit(limit)
+          .select("-__v")
+          .lean(),
+      Translation.countDocuments( dbQuery ),
+    ]);
+
+    console.log(`Successfully gathered ${items.length} filtered translations for user ${req.userId}`);
+    return res.status(200).json({
+      status: "success",
+      data: items,
+      meta: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
+
   } catch (e) {
     return res.status(500).json({ status: "error", errType: "ServerError" });
   }
 }
-
