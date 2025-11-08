@@ -13,7 +13,7 @@ router.use("/auth", authRouter); // authentication endpoint
 router.use("/translate", translateRouter); // translation endpoint
 router.use("/languages", languageRouter); // language endpoint
 router.use("/docs", docsRouter); // swagger documentation
-// router.use("/:userEmail", usersRouter); // user endpoint
+router.use("/users", usersRouter); // user endpoint
 
 
 export default router;

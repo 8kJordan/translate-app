@@ -15,7 +15,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof SyntaxError && "body" in err) {
         return res.status(400).json({
             status: "error",
-            errType: "BadRequest",
+            errType: "BadRequestError",
             desc: "Bad JSON in request body"
         });
     }
