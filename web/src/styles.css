@@ -5,10 +5,8 @@
   --panel-border: rgba(255, 255, 255, .08);
   --text: #eaf0ff;
   --muted: #a9b2c8;
-  --accent: #00d1c7;
-  /* teal */
-  --accent-2: #0097a7;
-  /* deep teal */
+  --accent: #00d1c7; /* teal */
+  --accent-2: #0097a7;/* deep teal */
   --danger: #ff6b6b;
   --ok: #5ad67d;
 }
@@ -79,7 +77,7 @@ body {
   position: relative;
   z-index: 1;
   background: #0f1728;
-  border: 1px solid rgba(255, 255, 255, .06);
+  border: 2px solid #00d1c7;
   border-radius: 16px;
   padding: 28px;
   width: 100%;
@@ -263,27 +261,83 @@ a:hover,
   color: var(--accent-2);
 }
 
-/* Fix header spacing and center hero on mobile */
-@media (max-width: 768px) {
-  .header {
-    justify-content: center; /* centers the logo horizontally */
-  }
-
-  .hero {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 8vh 16px;
-  }
-
-  .glass-card {
-    margin: 0 auto;
-    max-width: 400px; /* keep consistent width */
-    width: 100%;
-  }
-
-  body {
-    overflow-x: hidden; /* prevent any slight horizontal scroll */
-  }
+/* Translator layout */
+.translator-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr; /* single column */
 }
+
+/* If you still have a media query forcing 2 cols, delete it or override: */
+@media (min-width:1100px){
+  .translator-grid { grid-template-columns: 1fr; } /* keep stacked on large screens too */
+}
+
+.panel {
+  background: #0f1728;
+  border: 2px solid #00d1c7;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+}
+
+.label {
+  display: block;
+  font-size: .9rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.select {
+  background: #0c1526;
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 160px;
+}
+
+.select:focus {
+  outline: none; /* removes the default white glow */
+  border-color: var(--accent); /* use your accent color instead */
+}
+
+.textarea {
+  width: 100%;
+  min-height: 160px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: #0c1526;
+  color: var(--text);
+  padding: 14px;
+  resize: vertical;
+  outline: none;
+  margin-top: 10px;
+}
+
+.tools {
+  margin-top: 10px;
+}
+
+/* Link-style buttons for subtle actions like Swap / Copy */
+.link-btn {
+  background: none;
+  border: none;
+  color: white;
+  padding: 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.link-btn:hover {
+  color: white;
+}
+
+.link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
