@@ -13,10 +13,7 @@ export async function getUserProfile(req: AuthedRequest, res: Response) {
   const params = userEmailParam.safeParse(req.params);
 
   if (!params.success) { // failed zod parse, return errors
-    return res.status(400).json({
-      status: "error",
-      errType: "SchemaValidationErr",
-    });
+    return validationError(res, params.error.issues)
   }
 
   console.log(`Attempting to fetch user ${params.data?.userEmail} profile`)
@@ -47,7 +44,6 @@ export async function getUserProfile(req: AuthedRequest, res: Response) {
   }
 }
 
-// TODO continue here
 export async function listUserTranslations(req: AuthedRequest, res: Response) {
   const params = userEmailParam.safeParse(req.params);
   const query = paginationQuery.safeParse(req.query);
@@ -56,21 +52,24 @@ export async function listUserTranslations(req: AuthedRequest, res: Response) {
 
   try {
     const user = await User.findOne({ email: params.data.userEmail }).lean();
-    if (!user) return res.status(404).json({ status: "error", errType: "NotFound" });
+    if (!user) return res.status(404).json({ status: "error", errType: "UserNotFoundError", desc: "User not found" });
+
     if (String(user._id) !== req.userId) return forbidden(res);
 
     const { page, limit } = query.data;
-    const skip = (page - 1) * limit;
+    const skip: number = (page - 1) * limit; // calculating how many translations will get skipped
 
     const [items, total] = await Promise.all([
       Translation.find({ user: user._id })
-        .sort({ createdAt: -1 })
+        .sort({ createdAt: -1 }) // grabbing translation starting at newest
         .skip(skip)
         .limit(limit)
+        .select("-__v")
         .lean(),
       Translation.countDocuments({ user: user._id }),
     ]);
 
+    console.log(`Successfully gathered ${total} translations for user ${req.userId}`);
     return res.status(200).json({
       status: "success",
       data: items,
@@ -81,6 +80,7 @@ export async function listUserTranslations(req: AuthedRequest, res: Response) {
   }
 }
 
+// TODO cont herE
 export async function getUserTranslation(req: AuthedRequest, res: Response) {
   const params = userEmailParam.merge(translationIdParam).safeParse(req.params as any);
   if (!params.success) return validationError(res, params.error.issues);
