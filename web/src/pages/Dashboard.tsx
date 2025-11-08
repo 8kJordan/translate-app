@@ -224,9 +224,22 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           />
           <div className="row-space tools">
             <span className="muted">{result.length} chars</span>
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row" style={{ gap: 20 }}>
+              <button
+                className="link-btn"
+                onClick={() => {
+                  if (!result) return;
+                  const utterance = new SpeechSynthesisUtterance(result);
+                  utterance.lang = to; // use the selected language code if supported
+                  window.speechSynthesis.speak(utterance);
+                }}
+                disabled={!result}>
+                <span role="img" aria-label="speaker" style={{ fontSize: "1rem", lineHeight: 1 }}>🔊</span>
+                Listen
+              </button>
               <button className="link-btn" onClick={() => copy(result)} disabled={!result}>Copy</button>
             </div>
+
           </div>
         </div>
       </div>
