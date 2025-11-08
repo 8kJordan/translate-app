@@ -4,6 +4,7 @@ const languageCode = zod
     .string()
     .trim()
     .lowercase()
+    .min(2)
 
 export const envSchema = zod.object({
     AZURE_API_KEY: zod.string(),

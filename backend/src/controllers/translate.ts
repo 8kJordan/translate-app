@@ -12,10 +12,14 @@ function getEnvs(){
     return envSchema.parse(process.env);
 }
 
-interface TranslationRequest {
-    text: string
-}
+
 interface IndividualTranslation {
+
+    detectedLanguage?: {
+        language: string;
+        score: number;
+    }
+
     translations: {
         text: string;
         to: string;
@@ -68,7 +72,6 @@ export const translateText = async (req: AuthedRequest, res: Response) => {
     const reqBody = translateRequest.safeParse(req.body);
 
     if (!reqBody.success) {
-        console.log(reqBody.error.message)
         return validationError(res, reqBody.error.issues)
     }
 
@@ -76,9 +79,16 @@ export const translateText = async (req: AuthedRequest, res: Response) => {
     try{
         // making translation API request
         response = await requestTranslation(envs, reqBody.data);
+
+        // if language was autodetected, extract it to insert translation in DB
+        if ("detectedLanguage" in response.data[0]) {
+            reqBody.data.from = response.data[0].detectedLanguage!.language;
+        }
+
     } catch (err: any) {
 
         if ( err.response && err.response.status >= 400 && err.response.status <= 499) {
+
             console.log("Failed to query translation API due to a BadRequestError", err.response.data.error.message);
 
             return res.status(400).json({
