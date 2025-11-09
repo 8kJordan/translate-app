@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/server.ts",
     "build": "tsc -b && tsc-alias -p tsconfig.json && cp src/docs/swagger.yaml dist/docs/",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -31,11 +32,14 @@
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/jest": "^29.5.14",
     "@types/mongoose": "^5.11.96",
     "@types/node": "^24.8.1",
     "@types/nodemailer": "^7.0.2",
     "@types/uuid": "^10.0.0",
+    "jest": "^29.7.0",
     "ts-node-dev": "^2.0.0",
+    "ts-jest": "^29.3.4",
     "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3"
