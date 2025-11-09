@@ -47,6 +47,7 @@ jobs:
           ssh-add - <<< "$SSH_KEY"
           rsync -az --delete -e "ssh -o StrictHostKeyChecking=no" \
             --exclude "node_modules" --exclude ".git" --exclude .env \
+            --exclude "tests" --exclude "dist/tests" --exclude "dist/**/*.test.*" \
             backend/dist backend/package.json backend/package-lock.json \
             "$SSH_USER@$SSH_HOST:/home/mern/server/"
 
