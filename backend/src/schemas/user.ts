@@ -22,8 +22,8 @@ export const paginationQuery = z.object({
 export const searchPaginationQuery = z.object({
   from: languageCode.optional(),
   to: languageCode.optional(),
-  sourceText: z.string().trim().min(5).max(100).optional(),
-  translatedText: z.string().trim().min(5).max(100).optional(),
+  sourceText: z.string().trim().min(1).max(100).optional(),
+  translatedText: z.string().trim().min(1).max(100).optional(),
 }).transform(obj =>
     Object.fromEntries(Object.entries(obj).filter(([_, v]) => v!= null && v !== "" && v !== undefined))
 );
