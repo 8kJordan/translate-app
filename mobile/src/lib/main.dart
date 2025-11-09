@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'api/client.dart';
 import 'screens/translate_screen.dart';
 import 'screens/users_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await api.ensureInitialized();
   runApp(const TranslateApp());
 }
 
