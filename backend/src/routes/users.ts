@@ -1,13 +1,13 @@
 import { Router, Request, Response } from "express";
+import {getUserProfile, listUserTranslations, searchUserTranslations} from "@controllers/user";
+import { requireAuth } from "@utils/authMiddleware";
+
 const router = Router();
+router.use(requireAuth);
 
-router.get("/", (_req: Request, res: Response) => {
-    res.json([{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]);
-});
+router.get("/:userEmail", getUserProfile);
+router.get("/:userEmail/translations", listUserTranslations)
+router.post("/:userEmail/translations/search", searchUserTranslations)
 
-router.post("/", (req: Request, res: Response) => {
-    const { name } = req.body;
-    res.status(201).json({ message: `User ${name} created.` });
-});
 
 export default router;

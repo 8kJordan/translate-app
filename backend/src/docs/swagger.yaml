@@ -15,6 +15,8 @@ tags:
     description: Text translation operations.
   - name: Languages
     description: Language metadata queries.
+  - name: Users
+    description: Authenticated user profile and translation history endpoints.
 paths:
   /auth:
     post:
@@ -276,6 +278,227 @@ paths:
                 $ref: '#/components/schemas/ValidationErrorResponse'
         '500':
           $ref: '#/components/responses/ServerError'
+  /users/{userEmail}:
+    get:
+      tags: [Users]
+      summary: Get the current user's profile
+      description: Returns non-sensitive profile details for the authenticated user matching `userEmail`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: userEmail
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+            example: jane.doe@example.com
+          description: Email address for the authenticated user.
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+              examples:
+                default:
+                  value:
+                    status: success
+                    data:
+                      email: jane.doe@example.com
+                      firstName: Jane
+                      lastName: Doe
+                      phone: '+14155550123'
+                      isVerified: true
+                      createdAt: '2025-01-15T12:34:56.000Z'
+        '400':
+          description: Invalid email parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/UserNotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /users/{userEmail}/translations:
+    get:
+      tags: [Users]
+      summary: List user translations
+      description: Returns a paginated list of translations created by the authenticated user.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: userEmail
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+            example: jane.doe@example.com
+          description: Email address for the authenticated user.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 2
+          description: Page number to retrieve.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 5
+          description: Number of translations per page.
+      responses:
+        '200':
+          description: Translations fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserTranslationsResponse'
+              examples:
+                default:
+                  value:
+                    status: success
+                    data:
+                      - _id: '66a1b2c3d4e5f60718293abc'
+                        user: '507f191e810c19729de860ea'
+                        sourceText: 'Hello world'
+                        translatedText: 'Hola mundo'
+                        from: en
+                        to: es
+                        createdAt: '2025-01-15T12:30:00.000Z'
+                        updatedAt: '2025-01-15T12:30:00.000Z'
+                      - _id: '66a1b2c3d4e5f60718293abd'
+                        user: '507f191e810c19729de860ea'
+                        sourceText: 'How are you?'
+                        translatedText: '¿Cómo estás?'
+                        from: en
+                        to: es
+                        createdAt: '2025-01-15T12:31:00.000Z'
+                        updatedAt: '2025-01-15T12:31:00.000Z'
+                    meta:
+                      page: 2
+                      limit: 5
+                      total: 12
+                      pages: 3
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/UserNotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /users/{userEmail}/translations/search:
+    post:
+      tags: [Users]
+      summary: Search user translations
+      description: Filters the authenticated user's translations using optional language or text criteria.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: userEmail
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+            example: jane.doe@example.com
+          description: Email address for the authenticated user.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+          description: Page number to retrieve.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+          description: Number of translations per page.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserTranslationSearchRequest'
+            examples:
+              default:
+                value:
+                  from: en
+                  to: es
+                  sourceText: hello
+                  translatedText: hola
+              partial-match:
+                value:
+                  sourceText: hel
+                  translatedText: hola
+      responses:
+        '200':
+          description: Filtered translations fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserTranslationsResponse'
+              examples:
+                default:
+                  value:
+                    status: success
+                    data:
+                      - _id: '66a1b2c3d4e5f60718293abe'
+                        user: '507f191e810c19729de860ea'
+                        sourceText: 'Hello there'
+                        translatedText: 'Hola allí'
+                        from: en
+                        to: es
+                        createdAt: '2025-01-15T12:40:00.000Z'
+                        updatedAt: '2025-01-15T12:40:00.000Z'
+                    meta:
+                      page: 1
+                      limit: 10
+                      total: 1
+                      pages: 1
+        '400':
+          description: Invalid search criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/UserNotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
 components:
   securitySchemes:
     cookieAuth:
@@ -519,6 +742,133 @@ components:
         code:
           type: string
       required: [status, code]
+    UserProfile:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        isVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [email, firstName, lastName, isVerified, createdAt]
+    UserProfileResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: '#/components/schemas/UserProfile'
+      required: [status, data]
+      example:
+        status: success
+        data:
+          email: jane.doe@example.com
+          firstName: Jane
+          lastName: Doe
+          phone: '+14155550123'
+          isVerified: true
+          createdAt: '2024-05-01T15:30:00.000Z'
+    TranslationResource:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Translation identifier.
+          example: 6651234abcdeff0987654321
+        user:
+          type: string
+          description: Owning user's identifier.
+        sourceText:
+          type: string
+        translatedText:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [_id, user, sourceText, translatedText, from, to, createdAt, updatedAt]
+    UserTranslationsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationResource'
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            pages:
+              type: integer
+          required: [page, limit, total, pages]
+      required: [status, data, meta]
+    UserTranslationSearchRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          description: Filter translations by source language code.
+        to:
+          type: string
+          description: Filter translations by target language code.
+        sourceText:
+          type: string
+          minLength: 5
+          maxLength: 100
+          description: Filter translations containing this source text (case insensitive substring match).
+        translatedText:
+          type: string
+          minLength: 5
+          maxLength: 100
+          description: Filter translations containing this translated text (case insensitive substring match).
+      additionalProperties: false
+    UserNotFoundError:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        errType:
+          type: string
+          enum: [UserNotFoundError]
+        desc:
+          type: string
+      required: [status, errType, desc]
+    ForbiddenError:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        errType:
+          type: string
+          enum: [ForbiddenError]
+      required: [status, errType]
   responses:
     UnauthorizedError:
       description: Missing or invalid authentication token
@@ -552,3 +902,15 @@ components:
               desc:
                 type: string
             required: [status, errType]
+    ForbiddenError:
+      description: Authenticated user lacks permission to access the requested resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ForbiddenError'
+    UserNotFoundError:
+      description: The specified user could not be found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserNotFoundError'
