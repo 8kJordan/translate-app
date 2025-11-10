@@ -5,6 +5,34 @@ import { api } from "@/api";
 
 type Lang = { code: string; name: string };
 
+type UserSafe = {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  createdAt?: string;
+};
+
+type TranslationItem = {
+  _id: string;
+  sourceText: string;
+  translatedText: string;
+  from: string;
+  to: string;
+  createdAt?: string;
+};
+
+type PageMeta = { page: number; limit: number; total: number; pages: number };
+
+type AuthMe = {
+  status: "success" | "error";
+  isAuthenticated: boolean;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+};
+
 const LANGUAGES_ENDPOINT = "/api/languages";
 const TRANSLATE_ENDPOINT = "/api/translate";
 
@@ -23,8 +51,17 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [text, setText] = useState<string>("");
   const [result, setResult] = useState<string>("");
 
-  // autodetect display
+  // autodetect display (kept for UI chip if you want it later)
   const [detectedFrom, setDetectedFrom] = useState<string | null>(null);
+
+  // user + history sidebar
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [user, setUser] = useState<UserSafe | null>(null);
+  const [items, setItems] = useState<TranslationItem[]>([]);
+  const [meta, setMeta] = useState<PageMeta>({ page: 1, limit: 10, total: 0, pages: 0 });
+  const [query, setQuery] = useState<string>("");
+
+  // Helpers
   const codeToName = (code: string) =>
     languages.find(l => l.code === code)?.name || code.toUpperCase();
 
@@ -35,22 +72,57 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         setErr(null);
         const res = await api<{ status: string; supportedLanguages: Record<string, { name: string; nativeName: string }> }>(
           LANGUAGES_ENDPOINT,
-          { method: 'GET' }
+          { method: "GET" }
         );
-
         const langs = Object.entries(res.supportedLanguages)
-          .map(([code, info]) => ({
-            code,
-            name: info.name || info.nativeName || code.toUpperCase(),
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name)); // alphabetize once
-
+          .map(([code, info]) => ({ code, name: info.name || info.nativeName || code.toUpperCase() }))
+          .sort((a, b) => a.name.localeCompare(b.name));
         setLanguages(langs);
       } catch (e: any) {
         console.error("Failed to load languages:", e);
         setErr(e?.data?.message || "Failed to load languages.");
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // 1) Ask backend who I am using cookie (per your router: POST /api/auth)
+        const me = await api<{ status: "success" | "error"; isAuthenticated: boolean; email?: string; firstName?: string; lastName?: string; phone?: string }>(
+          "/api/auth",
+          { method: "POST" }
+        );
+
+        if (!me.isAuthenticated || !me.email) {
+          setErr("Not authenticated.");
+          return;
+        }
+
+        setUserEmail(me.email);
+
+        // (Optional) quick-fill
+        setUser({
+          email: me.email,
+          firstName: me.firstName,
+          lastName: me.lastName,
+          phone: me.phone,
+        } as any);
+
+        // 2) Fetch full profile via your users route (requires path param)
+        const prof = await api<{ status: "success"; data: UserSafe }>(
+          `/api/users/${encodeURIComponent(me.email)}`,
+          { method: "GET" }
+        );
+        setUser(prof.data);
+
+        // 3) Load first page of history
+        await loadPage(1, query, me.email);
+      } catch (e: any) {
+        setErr(e?.data?.message || e?.message || "Failed to load user.");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Clear detected chip when user changes inputs
@@ -63,6 +135,49 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     [text, to, loading]
   );
 
+  async function loadPage(page: number, q: string, explicitEmail?: string) {
+    const email = explicitEmail ?? userEmail;
+    if (!email) return;
+
+    const trimmed = q.trim();
+    const limit = meta.limit || 10;
+
+    try {
+      if (trimmed.length === 0) {
+        const res = await api<{ status: "success"; data: TranslationItem[]; meta: PageMeta }>(
+          `/api/users/${encodeURIComponent(email)}/translations?page=${page}&limit=${limit}`,
+          { method: "GET" }
+        );
+        setItems(res.data);
+        setMeta(res.meta);
+        return;
+      }
+
+      // Try sourceText first
+      const resSource = await api<{ status: "success"; data: TranslationItem[]; meta: PageMeta }>(
+        `/api/users/${encodeURIComponent(email)}/translations/search?page=${page}&limit=${limit}`,
+        { method: "POST", body: JSON.stringify({ sourceText: trimmed }) }
+      );
+
+      if (resSource.meta.total > 0) {
+        setItems(resSource.data);
+        setMeta(resSource.meta);
+        return;
+      }
+
+      // Fallback to translatedText
+      const resTranslated = await api<{ status: "success"; data: TranslationItem[]; meta: PageMeta }>(
+        `/api/users/${encodeURIComponent(email)}/translations/search?page=${page}&limit=${limit}`,
+        { method: "POST", body: JSON.stringify({ translatedText: trimmed }) }
+      );
+      setItems(resTranslated.data);
+      setMeta(resTranslated.meta);
+    } catch (e: any) {
+      console.error("History load failed:", e?.data || e);
+      setErr(e?.data?.message || e?.message || "Failed to load history.");
+    }
+  }
+
   async function handleTranslate() {
     if (!canTranslate) return;
     setLoading(true);
@@ -71,28 +186,17 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     setDetectedFrom(null);
 
     try {
-      // Build payload; omit 'from' entirely if auto
-      const payload: Record<string, string> = {
-        text: text.trim(),
-        to
-      };
+      const payload: Record<string, string> = { text: text.trim(), to };
       if (from !== "auto") payload.from = from;
 
       const res = await api<{
+        status: string;
         translatedText?: string;
         translation?: string;
         text?: string;
-        from?: string; // detected language code from backend
+        from?: string;
         to?: string;
-      }>(TRANSLATE_ENDPOINT, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-
-      // If backend detected language, update 'from' dropdown
-      if (from === "auto" && res.from) {
-        setFrom(res.from);
-      }
+      }>(TRANSLATE_ENDPOINT, { method: "POST", body: JSON.stringify(payload) });
 
       const out =
         res.translatedText ||
@@ -103,10 +207,10 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         "";
       setResult(out);
 
-      // If auto-detect was selected and backend returned the detected source, show it
-      if (from === "auto" && res.from) {
-        setDetectedFrom(res.from);
-      }
+      if (from === "auto" && res.from) setFrom(res.from);
+
+      // refresh history after translate
+      await loadPage(1, query);
     } catch (e: any) {
       setErr(e?.data?.message || e?.message || "Translation failed.");
     } finally {
@@ -115,7 +219,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   function swap() {
-    if (from === "auto") return; // avoid swapping auto-detect to target
+    if (from === "auto") return;
     setFrom(to);
     setTo(from);
     if (result) {
@@ -127,9 +231,14 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   async function copy(textToCopy: string) {
     try {
       await navigator.clipboard.writeText(textToCopy);
-    } catch {
-      // no-op
-    }
+    } catch { }
+  }
+
+  function speak() {
+    if (!result) return;
+    const utterance = new SpeechSynthesisUtterance(result);
+    utterance.lang = to;
+    window.speechSynthesis.speak(utterance);
   }
 
   async function handleLogout() {
@@ -147,8 +256,15 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     }
   }
 
+  function selectHistory(item: TranslationItem) {
+    setFrom(item.from || "auto");
+    setTo(item.to || "en");
+    setText(item.sourceText || "");
+    setResult(item.translatedText || "");
+  }
+
   return (
-    <div className="container">
+    <div className="container" style={{ maxWidth: 1200 }}>
       <header className="header">
         <h2 className="h2">Dashboard</h2>
         <button className="btn btn-gradient" onClick={handleLogout} disabled={logoutLoading}>
@@ -158,90 +274,155 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
 
       {err && <div className="banner" role="alert">{err}</div>}
 
-      {/* Translator panel */}
-      <div className="translator-grid">
-        <div className="panel">
-          <div className="row-space">
-            <div className="select-wrap">
-              <label className="label">From</label>
-              <select
-                className="select"
-                value={from}
-                onChange={e => setFrom(e.target.value)}
-              >
-                <option value="auto">Auto-detect</option>
-                {languages.map(l => (
-                  <option key={l.code} value={l.code}>{l.name}</option>
-                ))}
-              </select>
-
-              {/* show detected language when auto-detect is used */}
-              {from === "auto" && detectedFrom && (
-                <div className="muted" style={{ marginTop: 6 }}>
-                  Detected: <strong>{codeToName(detectedFrom)} ({detectedFrom})</strong>
-                </div>
+      {/* Layout: Sidebar + Main */}
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 }}>
+        {/* Sidebar */}
+        <aside className="panel" style={{ height: "calc(100vh - 160px)", overflow: "auto" }}>
+          <div style={{ marginBottom: 16 }}>
+            <div className="h2" style={{ fontSize: "1.2rem", margin: 0 }}>Your Account</div>
+            <div className="muted" style={{ marginTop: 6 }}>
+              {user ? (
+                <>
+                  <div>{[user.firstName, user.lastName].filter(Boolean).join(" ") || "—"}</div>
+                  <div>{user.email}</div>
+                </>
+              ) : (
+                <span>Loading...</span>
               )}
             </div>
+          </div>
 
-            <button className="link-btn" onClick={swap} title="Swap languages" disabled={from === "auto"}>
-              ⇄ Swap
-            </button>
-
-            <div className="select-wrap">
-              <label className="label">To</label>
-              <select className="select" value={to} onChange={e => setTo(e.target.value)}>
-                {languages.map(l => (
-                  <option key={l.code} value={l.code}>{l.name}</option>
-                ))}
-              </select>
+          <div style={{ margin: "12px 0" }}>
+            <label className="label">Search history</label>
+            <input
+              className="input"
+              placeholder="Search text…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") loadPage(1, (e.target as HTMLInputElement).value);
+              }}
+            />
+            <div className="row" style={{ marginTop: 8, gap: 8 }}>
+              <button className="link-btn" onClick={() => loadPage(1, query)}>Search</button>
+              <button className="link-btn" onClick={() => { setQuery(""); loadPage(1, ""); }}>Clear</button>
             </div>
           </div>
 
-          <textarea
-            className="textarea"
-            placeholder="Type text to translate…"
-            value={text}
-            onChange={e => setText(e.target.value)}
-          />
-          <div className="row-space tools">
-            <span className="muted">{text.length} chars</span>
-            <div className="row" style={{ gap: 20 }}>
-              <button className="link-btn" onClick={() => setText("")} disabled={!text}>Clear</button>
-              <Button loading={loading} onClick={handleTranslate} disabled={!canTranslate}>
-                Translate
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="panel">
-          <label className="label">Result</label>
-          <textarea
-            className="textarea"
-            placeholder="Translation will appear here…"
-            value={result}
-            onChange={e => setResult(e.target.value)}
-          />
-          <div className="row-space tools">
-            <span className="muted">{result.length} chars</span>
-            <div className="row" style={{ gap: 20 }}>
+          <div style={{ marginTop: 12, marginBottom: 8, fontWeight: 700 }}>History</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {items.length === 0 && <div className="muted">No translations yet.</div>}
+            {items.map(it => (
               <button
-                className="link-btn"
-                onClick={() => {
-                  if (!result) return;
-                  const utterance = new SpeechSynthesisUtterance(result);
-                  utterance.lang = to; // use the selected language code if supported
-                  window.speechSynthesis.speak(utterance);
-                }}
-                disabled={!result}>
-                <span role="img" aria-label="speaker" style={{ fontSize: "1rem", lineHeight: 1 }}>🔊</span>
-                Listen
+                key={it._id}
+                className="glass-card"
+                style={{ textAlign: "left", padding: 12, cursor: "pointer" }}
+                onClick={() => selectHistory(it)}
+                title={`${codeToName(it.from)} → ${codeToName(it.to)}`}
+              >
+                <div className="muted" style={{ fontSize: ".85rem", marginBottom: 6 }}>
+                  {codeToName(it.from)} → {codeToName(it.to)}
+                </div>
+                <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {it.sourceText}
+                </div>
+                <div className="muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 4 }}>
+                  {it.translatedText}
+                </div>
               </button>
-              <button className="link-btn" onClick={() => copy(result)} disabled={!result}>Copy</button>
+            ))}
+          </div>
+
+          {meta.pages > 1 && (
+            <div className="row-space" style={{ marginTop: 12 }}>
+              <button className="link-btn" onClick={() => loadPage(Math.max(1, meta.page - 1), query)} disabled={meta.page <= 1}>
+                ← Prev
+              </button>
+              <span className="muted">Page {meta.page} / {meta.pages}</span>
+              <button className="link-btn" onClick={() => loadPage(Math.min(meta.pages, meta.page + 1), query)} disabled={meta.page >= meta.pages}>
+                Next →
+              </button>
+            </div>
+          )}
+        </aside>
+
+        {/* Main translator panels */}
+        <main>
+          <div className="translator-grid">
+            <div className="panel">
+              <div className="row-space">
+                <div className="select-wrap">
+                  <label className="label">From</label>
+                  <select className="select" value={from} onChange={e => setFrom(e.target.value)}>
+                    <option value="auto">Auto-detect</option>
+                    {languages.map(l => (
+                      <option key={l.code} value={l.code}>{l.name}</option>
+                    ))}
+                  </select>
+                  {from === "auto" && detectedFrom && (
+                    <div className="muted" style={{ marginTop: 6 }}>
+                      Detected: <strong>{codeToName(detectedFrom)} ({detectedFrom})</strong>
+                    </div>
+                  )}
+                </div>
+
+                <button className="link-btn" onClick={swap} title="Swap languages" disabled={from === "auto"}>
+                  ⇄ Swap
+                </button>
+
+                <div className="select-wrap">
+                  <label className="label">To</label>
+                  <select className="select" value={to} onChange={e => setTo(e.target.value)}>
+                    {languages.map(l => (
+                      <option key={l.code} value={l.code}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <textarea
+                className="textarea"
+                placeholder="Type text to translate…"
+                value={text}
+                onChange={e => setText(e.target.value)}
+              />
+              <div className="row-space tools">
+                <span className="muted">{text.length} chars</span>
+                <div className="row" style={{ gap: 20 }}>
+                  <button className="link-btn" onClick={() => setText("")} disabled={!text}>Clear</button>
+                  <Button loading={loading} onClick={handleTranslate} disabled={!canTranslate}>
+                    Translate
+                  </Button>
+                </div>
+              </div>
             </div>
 
+            <div className="panel">
+              <label className="label">Result</label>
+              <textarea
+                className="textarea"
+                placeholder="Translation will appear here…"
+                value={result}
+                onChange={e => setResult(e.target.value)}
+              />
+              <div className="row-space tools">
+                <span className="muted">{result.length} chars</span>
+                <div className="row" style={{ gap: 12 }}>
+                  <button
+                    className="link-btn"
+                    style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    onClick={speak}
+                    disabled={!result}
+                  >
+                    <span role="img" aria-label="speaker" style={{ fontSize: "1rem", lineHeight: 1 }}>🔊</span>
+                    Listen
+                  </button>
+                  <button className="link-btn" onClick={() => copy(result)} disabled={!result}>Copy</button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
