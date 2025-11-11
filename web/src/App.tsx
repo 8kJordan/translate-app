@@ -1,10 +1,42 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
-import { useEffect, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import Brand from "@/components/Brand"
 import { api } from '@/api'
+
+function RequireAuth({
+  children,
+  onFail
+}: { children: ReactNode; onFail: () => void }) {
+  const [checking, setChecking] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // always try to refresh when entering the protected area
+        await api<{ status: string }>('/api/auth/refresh', { method: 'POST' });
+        setChecking(false);
+      } catch {
+        onFail();
+        navigate('/', { replace: true });
+      }
+    })();
+  }, [navigate, onFail]);
+
+  if (checking) {
+    return (
+      <div className="container">
+        <header className="header"><Brand /></header>
+        <p style={{ textAlign: 'center', marginTop: '2rem' }}>Checking session…</p>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
 
 export default function App() {
   // null = unknown (loading), true/false once we know
@@ -20,7 +52,7 @@ export default function App() {
       return;
     }
 
-    // Silent refresh using refreshToken cookie
+    // Silent refresh on app load / nav changes
     (async () => {
       try {
         await api<{ status: string }>('/api/auth/refresh', { method: 'POST' });
@@ -31,7 +63,6 @@ export default function App() {
     })();
   }, [location.search]);
 
-  // Don't render routes that could redirect until we know auth state
   if (authed === null) {
     return (
       <div className="container">
@@ -53,11 +84,9 @@ export default function App() {
         <Route
           path="/app"
           element={
-            authed ? (
+            <RequireAuth onFail={() => setAuthed(false)}>
               <Dashboard onLogout={() => setAuthed(false)} />
-            ) : (
-              <Navigate to="/" replace />
-            )
+            </RequireAuth>
           }
         />
         <Route path="*" element={<Navigate to="/" />} />
