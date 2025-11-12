@@ -279,10 +279,10 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         <aside
           className="panel"
           style={{
-            height: "calc(100vh - 160px)",
             display: "flex",
             flexDirection: "column",
-            overflow: "hidden" // list will scroll, header stays pinned
+            overflow: "auto",
+            maxHeight: "calc(100vh - 160px)", // acts as a limit, not a hard height
           }}
         >
           {/* Header block (pinned) */}

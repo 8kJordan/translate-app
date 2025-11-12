@@ -1,13 +1,12 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Field from "@/components/Field";
 import PasswordField from "@/components/PasswordField";
 import { api, LoginPayload } from "@/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import GlassCard from "@/components/GlassCard";
 import Button from "@/components/Button";
 import { Mail } from "lucide-react";
 import Banner from "@/components/Banner";
-import { Link } from "react-router-dom";
 
 function isValidEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) }
 
@@ -17,20 +16,41 @@ export default function Login({ onAuthed }: { onAuthed: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const checkingRef = useRef(false);
 
-  //Auto-redirect if already authenticated
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api<{ isAuthenticated: boolean }>("/api/auth", { method: "POST" });
-        if (res?.isAuthenticated) {
-          onAuthed();
-          navigate("/app", { replace: true });
-        }
-      } catch {
-        // not authed yet, show login form
+  // Silent refresh + auth gate 
+  const refreshAndRedirect = async () => {
+    if (checkingRef.current) return;
+    checkingRef.current = true;
+    try {
+      // 1) Try to refresh tokens (cookie-based)
+      await api<{ status: string }>("/api/auth/refresh", { method: "POST" });
+
+      // 2) Confirm we’re authenticated
+      const res = await api<{ isAuthenticated: boolean }>("/api/auth", { method: "POST" });
+      if (res?.isAuthenticated) {
+        onAuthed();
+        navigate("/app", { replace: true });
       }
-    })();
+    } catch {
+      // ignore; user not authed yet
+    } finally {
+      checkingRef.current = false;
+    }
+  };
+
+  // Run once on mount
+  useEffect(() => {
+    refreshAndRedirect();
+    // Also re-check when tab regains focus or becomes visible (common after email verify)
+    const onFocus = () => refreshAndRedirect();
+    const onShow = () => document.visibilityState === "visible" && refreshAndRedirect();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onShow);
+    };
   }, [navigate, onAuthed]);
 
   async function handleSubmit(e: FormEvent) {

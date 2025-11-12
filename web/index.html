@@ -1,21 +1,38 @@
 <!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Translify</title>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- HUD/Retro fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..800&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap"
-    rel="stylesheet">
-  <title>Translify</title>
-</head>
+    <!-- async Google Fonts (non-blocking) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style"
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@600&display=swap">
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@600&display=swap"
+      media="print" onload="this.media='all'">
+    <noscript>
+      <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@600&display=swap">
+    </noscript>
 
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
+    <!-- critical, minimal styles so brand paints instantly -->
+    <style>
+      :root { --accent:#0097a7; --text:#eaf0ff; }
+      .boot-header { display:flex; align-items:center; gap:10px; padding:24px; }
+      .boot-logo { width:40px; height:40px; border-radius:9999px; background:var(--accent); }
+      .boot-brand { font: 700 2rem/1 "Orbitron", system-ui, sans-serif; color:var(--text); letter-spacing:.08em; }
+    </style>
+  </head>
+  <body>
+    <header id="boot-header" class="boot-header">
+      <span class="boot-logo" aria-hidden="true"></span>
+      <span class="boot-brand">Translify</span>
+    </header>
 
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
