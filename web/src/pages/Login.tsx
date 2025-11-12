@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Field from "@/components/Field";
 import PasswordField from "@/components/PasswordField";
 import { api, LoginPayload } from "@/api";
@@ -9,16 +9,29 @@ import { Mail } from "lucide-react";
 import Banner from "@/components/Banner";
 import { Link } from "react-router-dom";
 
-
 function isValidEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) }
 
 export default function Login({ onAuthed }: { onAuthed: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  //Auto-redirect if already authenticated
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api<{ isAuthenticated: boolean }>("/api/auth", { method: "POST" });
+        if (res?.isAuthenticated) {
+          onAuthed();
+          navigate("/app", { replace: true });
+        }
+      } catch {
+        // not authed yet, show login form
+      }
+    })();
+  }, [navigate, onAuthed]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -68,7 +81,7 @@ export default function Login({ onAuthed }: { onAuthed: () => void }) {
 
           <PasswordField
             value={password}
-            onChange={(e) => setPassword(e.currentTarget.value)}
+            onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             autoComplete="current-password"
           />
@@ -83,7 +96,6 @@ export default function Login({ onAuthed }: { onAuthed: () => void }) {
           <Button loading={loading} type="submit" aria-label="Sign in">
             Sign In
           </Button>
-
         </form>
       </GlassCard>
     </div>
