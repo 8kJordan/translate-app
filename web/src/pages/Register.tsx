@@ -5,8 +5,7 @@ import Button from "@/components/Button";
 import Banner from "@/components/Banner";
 import GlassCard from "@/components/GlassCard";
 import { api, RegisterPayload } from "@/api";
-import { Mail } from "lucide-react";
-import { Phone } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import Field2 from "@/components/Field2";
 
@@ -22,10 +21,10 @@ export default function Register() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function set<K extends keyof RegisterPayload>(
-    key: K,
-    value: RegisterPayload[K]
-  ) {
+  // NEW: holds messages from Zod (e.g., password rules)
+  const [passwordIssues, setPasswordIssues] = useState<string[]>([]);
+
+  function set<K extends keyof RegisterPayload>(key: K, value: RegisterPayload[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -33,6 +32,7 @@ export default function Register() {
     e.preventDefault();
     setError(null);
     setMessage(null);
+    setPasswordIssues([]); // clear old schema errors
     setLoading(true);
 
     try {
@@ -40,16 +40,26 @@ export default function Register() {
         "/api/auth/register",
         { method: "POST", body: JSON.stringify(form) }
       );
-      setMessage(
-        res.message || "Check your inbox for a verification email."
-      );
+      setMessage(res.message || "Check your inbox for a verification email.");
     } catch (err: any) {
-      setError(
-        err?.data?.desc ||
-        err?.data?.message ||
-        err.message ||
-        "Registration failed"
-      );
+      const data = err?.data;
+
+      // If backend sent Zod issues, surface them
+      if (data?.errType === "SchemaValidationErr" && Array.isArray(data.errors)) {
+        const messages = data.errors
+          .filter((e: any) => Array.isArray(e.field) && e.field[0] === "password")
+          .map((e: any) => e.message)
+          .filter(Boolean);
+
+        if (messages.length) {
+          setPasswordIssues(messages);
+          setError("Please fix the password requirements.");
+        } else {
+          setError(data?.message || "Invalid input.");
+        }
+      } else {
+        setError(data?.desc || data?.message || err.message || "Registration failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -97,11 +107,24 @@ export default function Register() {
           <PasswordField
             label="Password"
             value={form.password}
-            onChange={(e) => set("password", e.currentTarget.value)}
+            onChange={(e) => {
+              set("password", e.currentTarget.value);
+              // clear messages as user edits password
+              if (passwordIssues.length) setPasswordIssues([]);
+            }}
             placeholder="At least 8 characters"
             autoComplete="new-password"
             required
           />
+
+          {/* Show Zod password schema messages here */}
+          {passwordIssues.length > 0 && (
+            <ul className="error" style={{ marginTop: 6, paddingLeft: 18 }}>
+              {passwordIssues.map((m, i) => (
+                <li key={i}>{m}</li>
+              ))}
+            </ul>
+          )}
 
           <div className="with-icon">
             <Phone className="icon" size={18} />
@@ -115,9 +138,7 @@ export default function Register() {
 
           <p className="muted" style={{ marginBottom: "0.5rem" }}>
             Already have an account?{" "}
-            <Link to="/" className="accent-link">
-              Return to login
-            </Link>
+            <Link to="/" className="accent-link">Return to login</Link>
           </p>
 
           <Button loading={loading} type="submit">Create account</Button>
