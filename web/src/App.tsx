@@ -16,8 +16,18 @@ function RequireAuth({
   useEffect(() => {
     (async () => {
       try {
-        // always try to refresh when entering the protected area
+        // Gate access on refresh only
         await api<{ status: string }>('/api/auth/refresh', { method: 'POST' });
+
+        try {
+          const res = await api<{ isAuthenticated: boolean }>('/api/auth', { method: 'POST' });
+          if (res?.isAuthenticated) {
+            console.log('auth succeeded ✅');
+          }
+        } catch (err) {
+          console.error('auth failed:', err);
+        }
+
         setChecking(false);
       } catch {
         onFail();
@@ -52,11 +62,16 @@ export default function App() {
       return;
     }
 
-    // Silent refresh on app load / nav changes
     (async () => {
       try {
+        // Refresh first; if this works, consider user authed
         await api<{ status: string }>('/api/auth/refresh', { method: 'POST' });
         setAuthed(true);
+
+        // Best-effort confirm; do NOT flip to false on a transient /auth miss
+        try {
+          await api<{ isAuthenticated: boolean }>('/api/', { method: 'POST' });
+        } catch { /* ignore */ }
       } catch {
         setAuthed(false);
       }
