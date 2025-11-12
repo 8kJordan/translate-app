@@ -8,7 +8,11 @@ export default function Brand() {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            style={{ display: "flex", alignItems: "center", gap: 10 }}
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+            }}
         >
             <motion.span
                 initial={{ rotate: -8, scale: 0.95 }}
@@ -21,13 +25,27 @@ export default function Brand() {
                     width: 40,
                     height: 40,
                     borderRadius: "9999px",
-                    background: "#0097a7",      
-                    boxShadow: "none"          
+                    background: "#0097a7",
+                    boxShadow: "none",
                 }}
             >
                 <Globe2 size={30} color="white" />
             </motion.span>
-            <span style={{ fontWeight: 700, fontSize: "1.5rem", letterSpacing: ".3px" }}>Translify</span>
+
+            {/* Use HUD display font with optional glow */}
+            <span
+                className="brand-text glow"
+                style={{
+                    fontSize: "2rem",
+                    lineHeight: 1,
+                    color: "#eaf0ff",
+                    opacity: 1,
+                    mixBlendMode: "normal"
+                }}
+            >
+                Translify
+            </span>
         </motion.div>
     );
 }
+

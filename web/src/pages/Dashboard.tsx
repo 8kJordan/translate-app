@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "@/components/Button";
 import { api } from "@/api";
+import { ArrowRight } from "lucide-react";
 
 type Lang = { code: string; name: string };
 
@@ -122,7 +123,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         setErr(e?.data?.message || e?.message || "Failed to load user.");
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Clear detected chip when user changes inputs
@@ -140,12 +140,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     if (!email) return;
 
     const trimmed = q.trim();
-    const limit = meta.limit || 10;
 
     try {
       if (trimmed.length === 0) {
+        // remove &limit=${limit}
         const res = await api<{ status: "success"; data: TranslationItem[]; meta: PageMeta }>(
-          `/api/users/${encodeURIComponent(email)}/translations?page=${page}&limit=${limit}`,
+          `/api/users/${encodeURIComponent(email)}/translations?page=${page}`,
           { method: "GET" }
         );
         setItems(res.data);
@@ -153,9 +153,9 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         return;
       }
 
-      // Try sourceText first
+      const base = `/api/users/${encodeURIComponent(email)}/translations/search?page=${page}`;
       const resSource = await api<{ status: "success"; data: TranslationItem[]; meta: PageMeta }>(
-        `/api/users/${encodeURIComponent(email)}/translations/search?page=${page}&limit=${limit}`,
+        base,
         { method: "POST", body: JSON.stringify({ sourceText: trimmed }) }
       );
 
@@ -165,9 +165,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         return;
       }
 
-      // Fallback to translatedText
       const resTranslated = await api<{ status: "success"; data: TranslationItem[]; meta: PageMeta }>(
-        `/api/users/${encodeURIComponent(email)}/translations/search?page=${page}&limit=${limit}`,
+        base,
         { method: "POST", body: JSON.stringify({ translatedText: trimmed }) }
       );
       setItems(resTranslated.data);
@@ -275,12 +274,23 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       {err && <div className="banner" role="alert">{err}</div>}
 
       {/* Layout: Sidebar + Main */}
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 }}>
+      <div className="page-grid">
         {/* Sidebar */}
-        <aside className="panel" style={{ height: "calc(100vh - 160px)", overflow: "auto" }}>
-          <div style={{ marginBottom: 16 }}>
-            <div className="h2" style={{ fontSize: "1.2rem", margin: 0 }}>Your Account</div>
-            <div className="muted" style={{ marginTop: 6 }}>
+        <aside
+          className="panel"
+          style={{
+            height: "calc(100vh - 160px)",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden" // list will scroll, header stays pinned
+          }}
+        >
+          {/* Header block (pinned) */}
+          <div style={{ paddingBottom: 8 }}>
+            <div className="h2" style={{ fontSize: "1.2rem", margin: 0, fontFamily: "var(--font-display)" }}>
+              Your Account
+            </div>
+            <div className="muted" style={{ marginTop: 6, fontFamily: "var(--font-ui)" }}>
               {user ? (
                 <>
                   <div>{[user.firstName, user.lastName].filter(Boolean).join(" ") || "—"}</div>
@@ -290,60 +300,115 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                 <span>Loading...</span>
               )}
             </div>
-          </div>
 
-          <div style={{ margin: "12px 0" }}>
+            {/* divider */}
+            <div style={{ height: 1, background: "var(--panel-border)", margin: "12px 0" }} />
+
+            {/* Search box + arrow + clear */}
             <label className="label">Search history</label>
-            <input
-              className="input"
-              placeholder="Search text…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") loadPage(1, (e.target as HTMLInputElement).value);
-              }}
-            />
-            <div className="row" style={{ marginTop: 8, gap: 8 }}>
-              <button className="link-btn" onClick={() => loadPage(1, query)}>Search</button>
-              <button className="link-btn" onClick={() => { setQuery(""); loadPage(1, ""); }}>Clear</button>
-            </div>
-          </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ position: "relative", flex: 1 }}>
+                <input
+                  className="input no-icon"
+                  placeholder="Search text…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && loadPage(1, query)}
+                  style={{ paddingRight: "2.4rem" }}
+                />
+                <button
+                  onClick={() => loadPage(1, query)}
+                  disabled={!query.trim()}
+                  title="Search"
+                  style={{
+                    position: "absolute",
+                    right: 6,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: query.trim() ? "pointer" : "default"
+                  }}
+                >
+                  <ArrowRight
+                    size={20}
+                    color={query.trim() ? "#00d1c7" : "#3a495c"}
+                    strokeWidth={2.2}
+                  />
+                </button>
+              </div>
 
-          <div style={{ marginTop: 12, marginBottom: 8, fontWeight: 700 }}>History</div>
-          <div style={{ display: "grid", gap: 8 }}>
-            {items.length === 0 && <div className="muted">No translations yet.</div>}
-            {items.map(it => (
               <button
-                key={it._id}
-                className="glass-card"
-                style={{ textAlign: "left", padding: 12, cursor: "pointer" }}
-                onClick={() => selectHistory(it)}
-                title={`${codeToName(it.from)} → ${codeToName(it.to)}`}
+                className="link-btn"
+                onClick={() => { setQuery(""); loadPage(1, ""); }}
+                style={{ whiteSpace: "nowrap" }}
               >
-                <div className="muted" style={{ fontSize: ".85rem", marginBottom: 6 }}>
-                  {codeToName(it.from)} → {codeToName(it.to)}
-                </div>
-                <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {it.sourceText}
-                </div>
-                <div className="muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 4 }}>
-                  {it.translatedText}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {meta.pages > 1 && (
-            <div className="row-space" style={{ marginTop: 12 }}>
-              <button className="link-btn" onClick={() => loadPage(Math.max(1, meta.page - 1), query)} disabled={meta.page <= 1}>
-                ← Prev
-              </button>
-              <span className="muted">Page {meta.page} / {meta.pages}</span>
-              <button className="link-btn" onClick={() => loadPage(Math.min(meta.pages, meta.page + 1), query)} disabled={meta.page >= meta.pages}>
-                Next →
+                Clear
               </button>
             </div>
-          )}
+
+            {/* small meta line */}
+            {meta?.total !== undefined && (
+              <div className="muted" style={{ fontSize: ".85rem", marginTop: 6 }}>
+                {meta.total} item{meta.total === 1 ? "" : "s"}
+              </div>
+            )}
+
+            {/* divider */}
+            <div style={{ height: 1, background: "var(--panel-border)", margin: "12px 0" }} />
+            <div className="h2" style={{ fontSize: "1.05rem", margin: 0, fontFamily: "var(--font-display)" }}>
+              History
+            </div>
+          </div>
+
+          {/* Scrollable list */}
+          <div style={{ flex: 1, minHeight: 0, overflow: "auto", marginTop: 8 }}>
+            <div style={{ display: "grid", gap: 0 }}>
+              {items.length === 0 && <div className="muted">No translations yet.</div>}
+
+              {items.map((it) => (
+                <button
+                  key={it._id}
+                  className="glass-card muted"
+                  style={{ textAlign: "left", padding: 12, cursor: "pointer" }}
+                  onClick={() => selectHistory(it)}
+                  title={`${codeToName(it.from)} → ${codeToName(it.to)}`}
+                  aria-label={`Open translation ${codeToName(it.from)} to ${codeToName(it.to)}`}
+                >
+                  <div className="muted" style={{ fontSize: ".85rem", marginBottom: 6, fontWeight: 700 }}>
+                    {codeToName(it.from)} → {codeToName(it.to)}
+                  </div>
+                  <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {it.sourceText}
+                  </div>
+                  <div className="muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 4 }}>
+                    {it.translatedText}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Pagination pinned at bottom of list */}
+            {meta.pages > 1 && (
+              <div className="row-space" style={{ marginTop: 0 }}>
+                <button
+                  className="link-btn"
+                  onClick={() => loadPage(Math.max(1, meta.page - 1), query)}
+                  disabled={meta.page <= 1}
+                >
+                  ← Prev
+                </button>
+                <span className="muted">Page {meta.page} / {meta.pages}</span>
+                <button
+                  className="link-btn"
+                  onClick={() => loadPage(Math.min(meta.pages, meta.page + 1), query)}
+                  disabled={meta.page >= meta.pages}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </div>
         </aside>
 
         {/* Main translator panels */}
@@ -387,7 +452,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                 onChange={e => setText(e.target.value)}
               />
               <div className="row-space tools">
-                <span className="muted">{text.length} chars</span>
+                <span className="muted" style={{ marginTop: 0 }}>{text.length} chars</span>
                 <div className="row" style={{ gap: 20 }}>
                   <button className="link-btn" onClick={() => setText("")} disabled={!text}>Clear</button>
                   <Button loading={loading} onClick={handleTranslate} disabled={!canTranslate}>
@@ -406,7 +471,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                 onChange={e => setResult(e.target.value)}
               />
               <div className="row-space tools">
-                <span className="muted">{result.length} chars</span>
+                <span className="muted" style={{ marginTop: 0 }}>{result.length} chars</span>
                 <div className="row" style={{ gap: 12 }}>
                   <button
                     className="link-btn"

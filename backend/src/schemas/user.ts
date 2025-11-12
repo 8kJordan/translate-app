@@ -11,10 +11,10 @@ export const translationIdParam = z.object({
     .regex(/^[0-9a-fA-F]{24}$/i, "Invalid translation id"),
 });
 
-// the defaults for page and limit will be 1, 10 respectively if they're not passed as arguments
+// the defaults for page and limit will be 1, 5 respectively if they're not passed as arguments
 export const paginationQuery = z.object({
   page: z.preprocess((v) => (v === undefined ? 1 : Number(v)), z.number().int().min(1)).default(1),
-  limit: z.preprocess((v) => (v === undefined ? 10 : Number(v)), z.number().int().min(1).max(100)).default(10),
+  limit: z.preprocess((v) => (v === undefined ? 5 : Number(v)), z.number().int().min(1).max(100)).default(5),
 });
 
 
