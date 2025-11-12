@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "CommonJS",
-    "rootDir": ".",
+    "rootDir": "./src",
     "outDir": "dist",
     "baseUrl": "./src",
     "strict": true,
@@ -16,5 +16,5 @@
       "@utils/*": ["utils/*"]
     }
   },
-  "include": ["src", "tests"]
+  "include": ["src"]
 }
