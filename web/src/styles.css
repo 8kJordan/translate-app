@@ -40,7 +40,6 @@ body {
   overflow-x: hidden;
 }
 
-
 /* ---------- Typography ---------- */
 h1, h2, h3, .hud-heading, .brand-text, .btn.btn-gradient {
   font-family: var(--font-display);

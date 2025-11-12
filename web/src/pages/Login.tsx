@@ -53,6 +53,21 @@ export default function Login({ onAuthed }: { onAuthed: () => void }) {
     };
   }, [navigate, onAuthed]);
 
+  //Auto-redirect if already authenticated
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api<{ isAuthenticated: boolean }>("/api/auth", { method: "POST" });
+        if (res?.isAuthenticated) {
+          onAuthed();
+          navigate("/app", { replace: true });
+        }
+      } catch {
+        // not authed yet, show login form
+      }
+    })();
+  }, [navigate, onAuthed]);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
