@@ -48,7 +48,7 @@ export default function Login({ onAuthed }: { onAuthed: () => void }) {
 
   return (
     <div className="hero">
-      <GlassCard style={{ minWidth: 380, maxWidth: 520, width: "100%" }}>
+      <GlassCard style={{ width: "clamp(280px, 92vw, 520px)" }}>
         <h2 className="h2">Welcome back</h2>
         <p className="muted">Sign in to continue.</p>
         {error && <Banner message={error} />}

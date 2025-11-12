@@ -8,6 +8,7 @@ import { api, RegisterPayload } from "@/api";
 import { Mail } from "lucide-react";
 import { Phone } from "lucide-react";
 import { Link } from "react-router-dom";
+import Field2 from "@/components/Field2";
 
 export default function Register() {
   const [form, setForm] = useState<RegisterPayload>({
@@ -56,7 +57,7 @@ export default function Register() {
 
   return (
     <div className="hero">
-      <GlassCard style={{ minWidth: 380, maxWidth: 520, width: "100%" }}>
+      <GlassCard style={{ width: "clamp(280px, 92vw, 520px)" }}>
         <h2 className="h2">Create account</h2>
         <p className="muted">We’ll send you a verification email.</p>
 
@@ -64,15 +65,15 @@ export default function Register() {
         {error && <Banner message={error} />}
 
         <form onSubmit={handleSubmit} className="vstack">
-          <div className="row-space" style={{ gap: 12 }}>
-            <Field
+          <div className="row-space">
+            <Field2
               label="First name"
               value={form.firstName || ""}
               onChange={(e) => set("firstName", e.currentTarget.value)}
               placeholder="First name"
               required
             />
-            <Field
+            <Field2
               label="Last name"
               value={form.lastName || ""}
               onChange={(e) => set("lastName", e.currentTarget.value)}
