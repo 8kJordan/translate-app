@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
+import 'theme/app_theme.dart';
+import 'screens/login_screen.dart';
 import 'api/client.dart';
-import 'screens/translate_screen.dart';
-import 'screens/users_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await api.ensureInitialized();
-  runApp(const TranslateApp());
+  runApp(const TranslifyApp());
 }
 
-class TranslateApp extends StatelessWidget {
-  const TranslateApp({super.key});
+class TranslifyApp extends StatelessWidget {
+  const TranslifyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Translate',
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
-      initialRoute: '/',
-      routes: {
-        '/': (_) => const TranslateScreen(),
-        '/users': (_) => const UsersScreen(),
-      },
+      title: 'Translify',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.theme,
+      home: const LoginScreen(),
     );
   }
 }
