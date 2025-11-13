@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../api/client.dart';
@@ -23,8 +25,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _loadingInit = true;
   String? _status;
   List<dynamic> _history = [];
-  List<String> _languageNames = [];
-  Map<String, String> _nameToCode = {};
+
+  /// default language list (fallback when API is unavailable)
+  List<String> _languageNames = const [
+    'Auto-detect',
+    'English',
+    'Spanish',
+    'French',
+    'German',
+    'Italian',
+  ];
+
+  /// map of language name -> code used by backend
+  Map<String, String> _nameToCode = {
+    'Auto-detect': 'auto', // only used for "from"
+    'English': 'en',
+    'Spanish': 'es',
+    'French': 'fr',
+    'German': 'de',
+    'Italian': 'it',
+  };
 
   @override
   void initState() {
@@ -36,27 +56,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       await api.ensureInitialized();
 
-      // Load languages
-      final langRes = await api.listLanguages();
-      final langs = langRes['data'];
-      final List<String> names = ['Auto-detect'];
-      final Map<String, String> map = {};
-      if (langs is List) {
-        for (final item in langs) {
-          if (item is Map) {
-            final name = item['name']?.toString();
-            final code = item['code']?.toString();
-            if (name != null && code != null) {
-              names.add(name);
-              map[name] = code;
+      // sstart with the current defaults
+      var names = List<String>.from(_languageNames);
+      var map = Map<String, String>.from(_nameToCode);
+
+      // \try to load languages from the backend.
+      // of anything goes wrong,  keep the defaults above.
+      try {
+        final langRes = await api.listLanguages();
+        final langs = langRes['data'];
+        final List<String> apiNames = ['Auto-detect'];
+        final Map<String, String> apiMap = {
+          'Auto-detect': 'auto',
+        };
+
+        if (langs is List && langs.isNotEmpty) {
+          for (final item in langs) {
+            if (item is Map) {
+              final name = item['name']?.toString();
+              final code = item['code']?.toString();
+              if (name != null && code != null) {
+                apiNames.add(name);
+                apiMap[name] = code;
+              }
             }
           }
+
+          // only override if we actually got at least one real language
+          if (apiNames.length > 1) {
+            names = apiNames;
+            map = apiMap;
+          }
         }
+      } catch (_) {
+   
       }
 
-      // Load translations history for this user
-      final histRes = await api.getUserTranslations(widget.userEmail,
-          page: 1, limit: 10);
+      // load translations history 
+      final histRes =
+          await api.getUserTranslations(widget.userEmail, page: 1, limit: 10);
       final histData = histRes['data'];
       List<dynamic> hist = [];
       if (histData is List) hist = histData;
@@ -87,8 +125,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
+
       final fromCode =
-    _from == 'Auto-detect' ? 'auto' : (_nameToCode[_from] ?? 'en');
+          _from == 'Auto-detect' ? 'auto' : (_nameToCode[_from] ?? 'en');
       final toCode = _nameToCode[_to] ?? 'en';
 
       final translated = await api.translate(
@@ -279,8 +318,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 8),
           if (_history.isEmpty)
             const Text('No translations yet.',
-                style:
-                    TextStyle(color: AppTheme.textMuted, fontSize: 13))
+                style: TextStyle(color: AppTheme.textMuted, fontSize: 13))
           else
             SizedBox(
               height: 120,
@@ -328,6 +366,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 4),
                     _dropdown(
                       value: _from,
+                      isFrom: true,
                       onChanged: (v) {
                         if (v == null) return;
                         setState(() => _from = v);
@@ -350,6 +389,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 4),
                     _dropdown(
                       value: _to,
+                      isFrom: false,
                       onChanged: (v) {
                         if (v == null) return;
                         setState(() => _to = v);
@@ -443,11 +483,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _dropdown({
     required String value,
+    required bool isFrom,
     required ValueChanged<String?> onChanged,
   }) {
-    final items = _languageNames.isEmpty
-        ? [value]
-        : _languageNames;
+    // FROM: includes "Auto-detect"
+    // TO:   excludes "Auto-detect"
+    final List<String> items = isFrom
+        ? _languageNames
+        : _languageNames.where((name) => name != 'Auto-detect').toList();
+
+    final safeValue = items.contains(value) ? value : items.first;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -458,7 +503,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: items.contains(value) ? value : items.first,
+          value: safeValue,
           isExpanded: true,
           dropdownColor: const Color(0xFF050B18),
           iconEnabledColor: AppTheme.cyan,
@@ -477,3 +522,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
+
