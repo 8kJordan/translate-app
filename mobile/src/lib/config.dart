@@ -1,13 +1,56 @@
-// lib/config.dart
-import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:cookie_jar/cookie_jar.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
-String apiBaseUrl() {
-  // When running on Chrome/web, localhost is correct.
-  if (kIsWeb) {
-    return 'http://localhost:3000';
+String apiBaseUrl() => "https://translify-backend.onrender.com"; 
+
+class ApiConfig {
+  static final ApiConfig instance = ApiConfig._internal();
+  factory ApiConfig() => instance;
+
+  late Dio dio;
+  bool _initialized = false;
+
+  ApiConfig._internal() {
+    dio = Dio(
+      BaseOptions(
+        baseUrl: apiBaseUrl(),
+        connectTimeout: const Duration(seconds: 25),   // <-- Extended for Render / slow hosting
+        receiveTimeout: const Duration(seconds: 25),   // <-- Extended
+        sendTimeout: const Duration(seconds: 25),      // <-- Extended
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+      ),
+    );
   }
+  Future<void> ensureInitialized() async {
+    if (_initialized) return;
 
-  // When running on Android emulator, use the special host:
-  // 10.0.2.2 -> maps to your computer's localhost.
-  return 'http://10.0.2.2:3000';
+    final dir = await getApplicationSupportDirectory();
+    final jarDir = Directory("${dir.path}/cookies");
+
+    if (!await jarDir.exists()) {
+      await jarDir.create(recursive: true);
+    }
+
+    final cookieJar = PersistCookieJar(storage: FileStorage(jarDir.path));
+    dio.interceptors.add(CookieManager(cookieJar));
+
+    dio.interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+
+      ),
+    );
+
+    _initialized = true;
+  }
 }
+
+final api = ApiConfig.instance;
+
