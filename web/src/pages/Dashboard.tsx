@@ -263,7 +263,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 1200 }}>
+    <div className="container">
       <header className="header">
         <h2 className="h2">Dashboard</h2>
         <button className="btn btn-gradient" onClick={handleLogout} disabled={logoutLoading}>

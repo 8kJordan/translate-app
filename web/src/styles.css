@@ -66,7 +66,14 @@ p, span, label, small {
 * { font-family: inherit; }
 
 /* ---------- Layout ---------- */
-.container { max-width: 1000px; margin: 0 auto; padding: 24px; }
+.container {
+  width: 100%;
+  max-width: min(1200px, 100vw - 32px); /* scales with screen */
+  margin-inline: auto;
+  padding-inline: clamp(16px, 4vw, 32px);
+  padding-block: clamp(16px, 24px, 40px);
+}
+
 .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .row, .row-space { display: flex; align-items: center; gap: 10px; }
 .row-space { justify-content: space-between; }
@@ -74,25 +81,53 @@ p, span, label, small {
 .page-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: clamp(200px, 28vw, 280px) minmax(0, 1fr);
+  grid-template-columns: 1fr;        /* mobile: stack everything */
   align-items: start;
 }
 
-.translator-grid { display: grid; gap: 24px; grid-template-columns: 1fr; }
-@media (min-width: 1100px) { .translator-grid { grid-template-columns: 1fr; } }
-@media (max-width: 768px) {
-  .container { padding-inline: 16px; }
-  .page-grid { grid-template-columns: 1fr; }
-  .panel, .glass-card { width: 100%; }
+/* Tablet: a bit wider sidebar, rest main */
+@media (min-width: 768px) {
+  .page-grid {
+    grid-template-columns: minmax(220px, 32%) minmax(0, 1fr);
+  }
 }
+
+/* Large desktop: give the layout more breathing room */
+@media (min-width: 1200px) {
+  .page-grid {
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  }
+}
+
+/* Translator panels: stay 1 column, but this keeps the hook if you later want 2 cols */
+.translator-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 768px) {
+  .panel,
+  .glass-card {
+    width: 100%;
+  }
+}
+
 
 /* ---------- Nav / Hero ---------- */
 .brand { font-weight: 800; letter-spacing: .3px; }
 .nav a { margin-left: 14px; color: #eaf0ff; text-decoration: none; font-weight: 600; }
 .nav a:hover { opacity: .9; }
 
-.hero { position: relative; display: grid; place-items: center; padding: 10vh 24px; margin-inline: auto; }
-.hero > * { width: 100%; max-width: 640px; margin-inline: auto; }
+.hero {
+  position: relative;
+  min-height: 75vh;          /* full viewport height */
+  display: flex;              /* flex is great for centering */
+  align-items: center;        /* vertical center */
+  justify-content: center;    /* horizontal center */
+  padding: 24px;              /* stable padding instead of 10vh */
+  margin-inline: auto;
+}
 
 /* ---------- Cards / Panels ---------- */
 .glass-card,
